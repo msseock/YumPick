@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		C5BC43D62F991D530014A0AF /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = C5BC43D52F991D530014A0AF /* Kingfisher */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		C5BC43B52F9905210014A0AF /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C5BC43D62F991D530014A0AF /* Kingfisher in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +117,7 @@
 			);
 			name = YumPick;
 			packageProductDependencies = (
+				C5BC43D52F991D530014A0AF /* Kingfisher */,
 			);
 			productName = YumPick;
 			productReference = C5BC43A72F99051F0014A0AF /* YumPick.app */;
@@ -195,6 +201,9 @@
 			);
 			mainGroup = C5BC439E2F99051F0014A0AF;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				C5BC43D42F991D530014A0AF /* XCRemoteSwiftPackageReference "Kingfisher" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C5BC43A82F99051F0014A0AF /* Products */;
 			projectDirPath = "";
@@ -590,6 +599,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		C5BC43D42F991D530014A0AF /* XCRemoteSwiftPackageReference "Kingfisher" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/onevcat/Kingfisher.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.8.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C5BC43D52F991D530014A0AF /* Kingfisher */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C5BC43D42F991D530014A0AF /* XCRemoteSwiftPackageReference "Kingfisher" */;
+			productName = Kingfisher;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = C5BC439F2F99051F0014A0AF /* Project object */;
 }
