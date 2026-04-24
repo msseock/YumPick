@@ -1,17 +1,16 @@
-//
-//  YumPickApp.swift
-//  YumPick
-//
-//  Created by 석민솔 on 4/22/26.
-//
-
 import SwiftUI
 
 @main
 struct YumPickApp: App {
+    @State private var authSession = AuthSession()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
+                .environment(authSession)
+                .task {
+                    NetworkManager.configure(onSessionExpired: authSession.expire)
+                }
         }
     }
 }
