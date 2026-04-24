@@ -33,9 +33,22 @@
 		C5BC43BE2F9905210014A0AF /* YumPickUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = YumPickUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C5BC45FE2F9BA7DA0014A0AF /* Exceptions for "YumPick" folder in "YumPick" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Resources/Info.plist,
+			);
+			target = C5BC43A62F99051F0014A0AF /* YumPick */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		C5BC43A92F99051F0014A0AF /* YumPick */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C5BC45FE2F9BA7DA0014A0AF /* Exceptions for "YumPick" folder in "YumPick" target */,
+			);
 			path = YumPick;
 			sourceTree = "<group>";
 		};
@@ -409,6 +422,7 @@
 				DEVELOPMENT_TEAM = ZUGAVD3728;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = YumPick/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "얌픽";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -447,6 +461,7 @@
 				DEVELOPMENT_TEAM = ZUGAVD3728;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = YumPick/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "얌픽";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
