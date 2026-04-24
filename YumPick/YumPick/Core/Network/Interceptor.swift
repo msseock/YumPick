@@ -6,11 +6,20 @@ protocol InterceptorProtocol {
 }
 
 final class Interceptor: InterceptorProtocol {
-    private let keychainManager = KeychainManager.shared
+    private let keychain: KeychainManager
+    private let onSessionExpired: @Sendable () async -> Void
+
+    init(
+        keychain: KeychainManager = .shared,
+        onSessionExpired: @escaping @Sendable () async -> Void = {}
+    ) {
+        self.keychain = keychain
+        self.onSessionExpired = onSessionExpired
+    }
 
     func adapt(_ request: URLRequest) async throws -> URLRequest {
         var request = request
-        if let accessToken = keychainManager.read(key: .accessToken) {
+        if let accessToken = keychain.read(key: .accessToken) {
             request.setValue(accessToken, forHTTPHeaderField: "Authorization")
         }
         return request
@@ -18,13 +27,14 @@ final class Interceptor: InterceptorProtocol {
 
     // 419 응답 시 리프레시 토큰으로 액세스 토큰 갱신 후 재요청용 URLRequest 반환
     func retry(_ request: URLRequest) async throws -> URLRequest {
-        guard let refreshToken = keychainManager.read(key: .refreshToken) else {
+        guard let refreshToken = keychain.read(key: .refreshToken) else {
+            await onSessionExpired()
             throw NetworkError.refreshTokenExpired
         }
 
         let newTokens = try await refreshAccessToken(refreshToken: refreshToken)
-        keychainManager.save(key: .accessToken, value: newTokens.accessToken)
-        keychainManager.save(key: .refreshToken, value: newTokens.refreshToken)
+        keychain.save(key: .accessToken, value: newTokens.accessToken)
+        keychain.save(key: .refreshToken, value: newTokens.refreshToken)
 
         var retryRequest = request
         retryRequest.setValue(newTokens.accessToken, forHTTPHeaderField: "Authorization")
@@ -54,7 +64,7 @@ final class Interceptor: InterceptorProtocol {
         case .unauthorized:
             throw NetworkError.unauthorized
         case .refreshTokenExpired:
-            AuthSession.shared.expire()
+            await onSessionExpired()
             throw NetworkError.refreshTokenExpired
         default:
             throw NetworkError.unknown
@@ -66,4 +76,3 @@ private struct RefreshTokenResponse: Decodable {
     let accessToken: String
     let refreshToken: String
 }
-

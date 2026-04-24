@@ -10,7 +10,7 @@ import Foundation
 final class NetworkManager {
     static let shared = NetworkManager()
     private let session: URLSession
-    private let interceptor: any InterceptorProtocol
+    private var interceptor: any InterceptorProtocol
 
     private init() {
         self.session = URLSession.shared
@@ -21,6 +21,12 @@ final class NetworkManager {
     init(session: URLSession, interceptor: any InterceptorProtocol = Interceptor()) {
         self.session = session
         self.interceptor = interceptor
+    }
+
+    /// 앱 시작 시 세션 만료 핸들러를 주입. AuthSession.expire 를 MainActor 에서 호출.
+    @MainActor
+    static func configure(onSessionExpired: @escaping @Sendable () async -> Void) {
+        shared.interceptor = Interceptor(onSessionExpired: onSessionExpired)
     }
 
     func request<T: Decodable>(
@@ -113,7 +119,6 @@ final class NetworkManager {
         case .unauthorized:         throw NetworkError.unauthorized
         case .forbidden:            throw NetworkError.forbidden
         case .refreshTokenExpired:
-            AuthSession.shared.expire()
             throw NetworkError.refreshTokenExpired
         case .tokenExpired:         throw NetworkError.tokenExpired
         case .invalidKey:           throw NetworkError.invalidKey
