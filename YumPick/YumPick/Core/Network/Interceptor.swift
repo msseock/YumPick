@@ -1,6 +1,11 @@
 import Foundation
 
-final class Interceptor {
+protocol InterceptorProtocol {
+    func adapt(_ request: URLRequest) async throws -> URLRequest
+    func retry(_ request: URLRequest) async throws -> URLRequest
+}
+
+final class Interceptor: InterceptorProtocol {
     private let keychainManager = KeychainManager.shared
 
     func adapt(_ request: URLRequest) async throws -> URLRequest {

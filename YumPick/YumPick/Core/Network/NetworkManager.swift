@@ -10,7 +10,7 @@ import Foundation
 final class NetworkManager {
     static let shared = NetworkManager()
     private let session: URLSession
-    private let interceptor: Interceptor
+    private let interceptor: any InterceptorProtocol
 
     private init() {
         self.session = URLSession.shared
@@ -18,7 +18,7 @@ final class NetworkManager {
     }
 
     // 테스트용
-    init(session: URLSession, interceptor: Interceptor = Interceptor()) {
+    init(session: URLSession, interceptor: any InterceptorProtocol = Interceptor()) {
         self.session = session
         self.interceptor = interceptor
     }
