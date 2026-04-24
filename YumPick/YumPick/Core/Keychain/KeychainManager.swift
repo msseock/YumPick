@@ -12,13 +12,18 @@ final class KeychainManager {
 
     func save(key: Key, value: String) {
         let data = Data(value.utf8)
-        let query: [String: Any] = [
+        let deleteQuery: [String: Any] = [
+            kSecClass as String:       kSecClassGenericPassword,
+            kSecAttrAccount as String: key.rawValue
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
+        
+        let addQuery: [String: Any] = [
             kSecClass as String:       kSecClassGenericPassword,
             kSecAttrAccount as String: key.rawValue,
             kSecValueData as String:   data
         ]
-        SecItemDelete(query as CFDictionary)
-        SecItemAdd(query as CFDictionary, nil)
+        SecItemAdd(addQuery as CFDictionary, nil)
     }
 
     func read(key: Key) -> String? {
@@ -29,8 +34,9 @@ final class KeychainManager {
             kSecMatchLimit as String:  kSecMatchLimitOne
         ]
         var result: AnyObject?
-        SecItemCopyMatching(query as CFDictionary, &result)
-        guard let data = result as? Data else { return nil }
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        
+        guard status == errSecSuccess, let data = result as? Data else { return nil }
         return String(data: data, encoding: .utf8)
     }
 
