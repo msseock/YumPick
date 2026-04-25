@@ -23,7 +23,15 @@ final class KeychainManager {
             kSecAttrAccount as String: key.rawValue,
             kSecValueData as String:   data
         ]
-        SecItemAdd(addQuery as CFDictionary, nil)
+        let status = SecItemAdd(addQuery as CFDictionary, nil)
+        
+        #if DEBUG
+        if status == errSecSuccess {
+            print("🔐 [KEYCHAIN] Saved: \(key.rawValue)")
+        } else {
+            print("❌ [KEYCHAIN] Save Failed (\(status)): \(key.rawValue)")
+        }
+        #endif
     }
 
     func read(key: Key) -> String? {
@@ -36,7 +44,16 @@ final class KeychainManager {
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         
-        guard status == errSecSuccess, let data = result as? Data else { return nil }
+        guard status == errSecSuccess, let data = result as? Data else {
+            #if DEBUG
+            print("🔑 [KEYCHAIN] Read Failed or Empty: \(key.rawValue)")
+            #endif
+            return nil
+        }
+        
+        #if DEBUG
+        print("🔑 [KEYCHAIN] Read Success: \(key.rawValue)")
+        #endif
         return String(data: data, encoding: .utf8)
     }
 
@@ -45,10 +62,21 @@ final class KeychainManager {
             kSecClass as String:       kSecClassGenericPassword,
             kSecAttrAccount as String: key.rawValue
         ]
-        SecItemDelete(query as CFDictionary)
+        let status = SecItemDelete(query as CFDictionary)
+        
+        #if DEBUG
+        if status == errSecSuccess {
+            print("🗑️ [KEYCHAIN] Deleted: \(key.rawValue)")
+        } else if status != errSecItemNotFound {
+            print("❌ [KEYCHAIN] Delete Failed (\(status)): \(key.rawValue)")
+        }
+        #endif
     }
 
     func deleteAll() {
+        #if DEBUG
+        print("🧹 [KEYCHAIN] Deleting All Keys...")
+        #endif
         delete(key: .accessToken)
         delete(key: .refreshToken)
     }
