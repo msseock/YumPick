@@ -4,13 +4,39 @@ import XCTest
 // MARK: - MockURLProtocol
 
 final class MockURLProtocol: URLProtocol {
-    static var requestHandler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
+    private static let lock = NSLock()
+    private static var _requestHandler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
+    private static var _requests: [URLRequest] = []
+
+    static var requestHandler: ((URLRequest) throws -> (HTTPURLResponse, Data))? {
+        get { lock.withLock { _requestHandler } }
+        set { lock.withLock { _requestHandler = newValue } }
+    }
+
+    static var requests: [URLRequest] {
+        lock.withLock { _requests }
+    }
+
+    static var lastRequest: URLRequest? {
+        lock.withLock { _requests.last }
+    }
+
+    static func reset() {
+        lock.withLock {
+            _requestHandler = nil
+            _requests = []
+        }
+    }
 
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
-        guard let handler = MockURLProtocol.requestHandler else {
+        let handler = MockURLProtocol.lock.withLock {
+            MockURLProtocol._requests.append(request)
+            return MockURLProtocol._requestHandler
+        }
+        guard let handler else {
             client?.urlProtocol(self, didFailWithError: URLError(.unknown))
             return
         }
@@ -25,6 +51,14 @@ final class MockURLProtocol: URLProtocol {
     }
 
     override func stopLoading() {}
+}
+
+private extension NSLock {
+    func withLock<T>(_ body: () throws -> T) rethrows -> T {
+        lock()
+        defer { unlock() }
+        return try body()
+    }
 }
 
 // MARK: - Helpers
@@ -54,7 +88,7 @@ private func makeMockSession() -> URLSession {
 
 private func makeResponse(statusCode: Int) -> HTTPURLResponse {
     HTTPURLResponse(
-        url: URL(string: SecretConstants.baseURL)!,
+        url: URL(string: "https://mock.yumpick.test")!,
         statusCode: statusCode,
         httpVersion: nil,
         headerFields: nil
@@ -147,12 +181,13 @@ final class NetworkManagerTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
+        MockURLProtocol.reset()
         currentSession = makeMockSession()
         sut = NetworkManager(session: currentSession)
     }
 
     override func tearDown() {
-        MockURLProtocol.requestHandler = nil
+        MockURLProtocol.reset()
         currentSession.invalidateAndCancel()
         currentSession = nil
         sut = nil
@@ -178,13 +213,12 @@ final class NetworkManagerTests: XCTestCase {
     }
 
     func test_공통헤더_SeSACKey_포함() async throws {
-        var capturedRequest: URLRequest?
-        MockURLProtocol.requestHandler = { request in
-            capturedRequest = request
+        MockURLProtocol.requestHandler = { _ in
             return (makeResponse(statusCode: 200), try JSONEncoder().encode(DummyResponse(id: 1, name: "test")))
         }
 
         let _: DummyResponse = try await sut.request(DummyAPI.noAuth)
+        let capturedRequest = MockURLProtocol.lastRequest
         XCTAssertEqual(capturedRequest?.value(forHTTPHeaderField: "SeSACKey"), SecretConstants.sesacKey)
     }
 
@@ -193,13 +227,12 @@ final class NetworkManagerTests: XCTestCase {
         KeychainManager.shared.save(key: .accessToken, value: "test-token")
         defer { KeychainManager.shared.delete(key: .accessToken) }
 
-        var capturedRequest: URLRequest?
-        MockURLProtocol.requestHandler = { request in
-            capturedRequest = request
+        MockURLProtocol.requestHandler = { _ in
             return (makeResponse(statusCode: 200), try JSONEncoder().encode(DummyResponse(id: 1, name: "test")))
         }
 
         let _: DummyResponse = try await sut.request(DummyAPI.noAuth)
+        let capturedRequest = MockURLProtocol.lastRequest
         XCTAssertNil(capturedRequest?.value(forHTTPHeaderField: "Authorization"))
     }
 
@@ -207,26 +240,24 @@ final class NetworkManagerTests: XCTestCase {
         KeychainManager.shared.save(key: .accessToken, value: "my-access-token")
         defer { KeychainManager.shared.delete(key: .accessToken) }
 
-        var capturedRequest: URLRequest?
-        MockURLProtocol.requestHandler = { request in
-            capturedRequest = request
+        MockURLProtocol.requestHandler = { _ in
             return (makeResponse(statusCode: 200), try JSONEncoder().encode(DummyResponse(id: 1, name: "test")))
         }
 
         let _: DummyResponse = try await sut.request(DummyAPI.fetch)
+        let capturedRequest = MockURLProtocol.lastRequest
         XCTAssertEqual(capturedRequest?.value(forHTTPHeaderField: "Authorization"), "my-access-token")
     }
 
     // MARK: 쿼리 파라미터
 
     func test_쿼리파라미터_URL에_포함() async throws {
-        var capturedRequest: URLRequest?
-        MockURLProtocol.requestHandler = { request in
-            capturedRequest = request
+        MockURLProtocol.requestHandler = { _ in
             return (makeResponse(statusCode: 200), try JSONEncoder().encode(DummyResponse(id: 1, name: "test")))
         }
 
         let _: DummyResponse = try await sut.request(DummyAPI.fetchWithQuery)
+        let capturedRequest = MockURLProtocol.lastRequest
         let urlString = capturedRequest?.url?.absoluteString ?? ""
         XCTAssertTrue(urlString.contains("page=1"))
         XCTAssertTrue(urlString.contains("limit=10"))
@@ -329,27 +360,24 @@ final class NetworkManagerTests: XCTestCase {
 
     func test_POST_body_httpBody에_인코딩됨() async throws {
         let body = DummyResponse(id: 42, name: "바디테스트")
-        var capturedRequest: URLRequest?
-        MockURLProtocol.requestHandler = { request in
-            capturedRequest = request
+        MockURLProtocol.requestHandler = { _ in
             return (makeResponse(statusCode: 200), try JSONEncoder().encode(body))
         }
 
         let _: DummyResponse = try await sut.request(DummyAPI.post(body))
-        let request = try XCTUnwrap(capturedRequest)
+        let request = try XCTUnwrap(MockURLProtocol.lastRequest)
         let data = try XCTUnwrap(bodyData(from: request))
         let decoded = try JSONDecoder().decode(DummyResponse.self, from: data)
         XCTAssertEqual(decoded, body)
     }
 
     func test_multipart_ContentType에_boundary_포함() async throws {
-        var capturedRequest: URLRequest?
-        MockURLProtocol.requestHandler = { request in
-            capturedRequest = request
+        MockURLProtocol.requestHandler = { _ in
             return (makeResponse(statusCode: 200), try JSONEncoder().encode(DummyResponse(id: 1, name: "test")))
         }
 
         let _: DummyResponse = try await sut.request(DummyAPI.multipart)
+        let capturedRequest = MockURLProtocol.lastRequest
         let contentType = capturedRequest?.value(forHTTPHeaderField: "Content-Type") ?? ""
         XCTAssertTrue(contentType.contains("multipart/form-data"))
         XCTAssertTrue(contentType.contains("boundary="))
@@ -407,16 +435,16 @@ final class NetworkManagerTests: XCTestCase {
         defer { session.invalidateAndCancel() }
 
         let expected = DummyResponse(id: 99, name: "갱신후")
-        var callCount = 0
         MockURLProtocol.requestHandler = { _ in
-            callCount += 1
-            if callCount == 1 { return (makeResponse(statusCode: 419), Data()) }
+            if MockURLProtocol.requests.count == 1 {
+                return (makeResponse(statusCode: 419), Data())
+            }
             return (makeResponse(statusCode: 200), try JSONEncoder().encode(expected))
         }
 
         let result: DummyResponse = try await localSut.request(DummyAPI.fetch)
         XCTAssertEqual(result, expected)
-        XCTAssertEqual(callCount, 2)
+        XCTAssertEqual(MockURLProtocol.requests.count, 2)
     }
 
     func test_419응답_retry_갱신후_Authorization헤더_교체됨() async throws {
@@ -429,16 +457,15 @@ final class NetworkManagerTests: XCTestCase {
         let (localSut, session) = makeSut(interceptor: mockInterceptor)
         defer { session.invalidateAndCancel() }
 
-        var secondRequest: URLRequest?
-        var callCount = 0
-        MockURLProtocol.requestHandler = { request in
-            callCount += 1
-            if callCount == 1 { return (makeResponse(statusCode: 419), Data()) }
-            secondRequest = request
+        MockURLProtocol.requestHandler = { _ in
+            if MockURLProtocol.requests.count == 1 {
+                return (makeResponse(statusCode: 419), Data())
+            }
             return (makeResponse(statusCode: 200), try JSONEncoder().encode(DummyResponse(id: 1, name: "test")))
         }
 
         let _: DummyResponse = try await localSut.request(DummyAPI.fetch)
+        let secondRequest = MockURLProtocol.requests.dropFirst().first
         XCTAssertEqual(secondRequest?.value(forHTTPHeaderField: "Authorization"), "refreshed-token")
     }
 
@@ -469,16 +496,14 @@ final class NetworkManagerTests: XCTestCase {
         let (localSut, session) = makeSut(interceptor: mockInterceptor)
         defer { session.invalidateAndCancel() }
 
-        var callCount = 0
         MockURLProtocol.requestHandler = { _ in
-            callCount += 1
-            return callCount == 1
+            return MockURLProtocol.requests.count == 1
                 ? (makeResponse(statusCode: 419), Data())
                 : (makeResponse(statusCode: 200), Data())
         }
 
         try await localSut.requestWithoutResponse(DummyAPI.fetch)
-        XCTAssertEqual(callCount, 2)
+        XCTAssertEqual(MockURLProtocol.requests.count, 2)
     }
 
     func test_requestWithoutResponse_418_refreshTokenExpired_에러() async {
@@ -496,22 +521,14 @@ final class NetworkManagerTests: XCTestCase {
 
     // MARK: 418 - 리프레시 토큰 만료
 
-    func test_418응답_refreshTokenExpired_에러_및_노티발송() async {
+    func test_418응답_refreshTokenExpired_에러() async {
         MockURLProtocol.requestHandler = { _ in (makeResponse(statusCode: 418), Data()) }
-
-        let expectation = XCTestExpectation(description: "refreshTokenExpired 노티 수신")
-        let observer = NotificationCenter.default.addObserver(
-            forName: .refreshTokenExpired,
-            object: nil,
-            queue: .main
-        ) { _ in expectation.fulfill() }
-        defer { NotificationCenter.default.removeObserver(observer) }
 
         do {
             let _: DummyResponse = try await sut.request(DummyAPI.noAuth)
             XCTFail("에러가 발생해야 합니다")
         } catch NetworkError.refreshTokenExpired {
-            await fulfillment(of: [expectation], timeout: 1)
+            // 통과 — 세션 만료 콜백은 Interceptor.retry() 에서 처리됨
         } catch {
             XCTFail("예상하지 못한 에러: \(error)")
         }

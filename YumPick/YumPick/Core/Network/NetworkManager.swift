@@ -139,7 +139,12 @@ final class NetworkManager {
     #endif
 
     private func buildRequest(from endpoint: any Endpoint) throws -> URLRequest {
-        guard let url = URL(string: endpoint.baseURL + endpoint.path) else {
+        guard
+            let url = URL(string: endpoint.baseURL + endpoint.path),
+            let scheme = url.scheme,
+            !scheme.isEmpty,
+            url.host != nil
+        else {
             throw NetworkError.invalidURL
         }
 
