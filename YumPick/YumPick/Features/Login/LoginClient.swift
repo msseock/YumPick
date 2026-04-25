@@ -4,6 +4,7 @@ import Foundation
 
 protocol LoginClientProtocol {
     func login(email: String, password: String) async throws -> AuthTokenBundle
+    func appleLogin(idToken: String, deviceToken: String?) async throws -> AuthTokenBundle
     func logout() async throws
 }
 
@@ -11,12 +12,14 @@ protocol LoginClientProtocol {
 
 private enum LoginEndpoint: Endpoint {
     case login(LoginRequest)
+    case appleLogin(AppleLoginRequest)
     case logout
 
     var path: String {
         switch self {
-        case .login:  return "/v1/users/login"
-        case .logout: return "/v1/users/logout"
+        case .login:       return "/v1/users/login"
+        case .appleLogin:  return "/v1/users/login/apple"
+        case .logout:      return "/v1/users/logout"
         }
     }
 
@@ -24,15 +27,16 @@ private enum LoginEndpoint: Endpoint {
 
     var parameters: RequestParameters {
         switch self {
-        case .login(let body): return .body(body)
-        case .logout:          return .none
+        case .login(let body):      return .body(body)
+        case .appleLogin(let body): return .body(body)
+        case .logout:               return .none
         }
     }
 
     var requiresAuthorization: Bool {
         switch self {
-        case .login:  return false
-        case .logout: return true
+        case .login, .appleLogin: return false
+        case .logout:             return true
         }
     }
 }
@@ -42,6 +46,11 @@ private enum LoginEndpoint: Endpoint {
 private struct LoginRequest: Encodable {
     let email: String
     let password: String
+}
+
+private struct AppleLoginRequest: Encodable {
+    let idToken: String
+    let deviceToken: String?
 }
 
 private struct LoginResponse: Decodable {
@@ -66,6 +75,18 @@ final class LoginClient: LoginClientProtocol {
         )
     }
 
+    func appleLogin(idToken: String, deviceToken: String?) async throws -> AuthTokenBundle {
+        let response: LoginResponse = try await NetworkManager.shared.request(
+            LoginEndpoint.appleLogin(AppleLoginRequest(idToken: idToken, deviceToken: deviceToken))
+        )
+        return AuthTokenBundle(
+            accessToken: response.accessToken,
+            refreshToken: response.refreshToken,
+            userID: response.user_id,
+            nick: response.nick
+        )
+    }
+
     func logout() async throws {
         try await NetworkManager.shared.requestWithoutResponse(LoginEndpoint.logout)
     }
@@ -77,10 +98,17 @@ final class MockLoginClient: LoginClientProtocol {
     var loginResult: Result<AuthTokenBundle, Error> = .success(
         AuthTokenBundle(accessToken: "mock-access", refreshToken: "mock-refresh", userID: "mock-id", nick: "테스터")
     )
+    var appleLoginResult: Result<AuthTokenBundle, Error> = .success(
+        AuthTokenBundle(accessToken: "mock-access", refreshToken: "mock-refresh", userID: "mock-id", nick: "테스터")
+    )
     var logoutResult: Result<Void, Error> = .success(())
 
     func login(email: String, password: String) async throws -> AuthTokenBundle {
         try loginResult.get()
+    }
+
+    func appleLogin(idToken: String, deviceToken: String?) async throws -> AuthTokenBundle {
+        try appleLoginResult.get()
     }
 
     func logout() async throws {
