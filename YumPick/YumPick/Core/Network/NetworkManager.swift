@@ -39,16 +39,35 @@ final class NetworkManager {
             urlRequest = try await interceptor.adapt(urlRequest)
         }
 
+        #if DEBUG
+        logRequest(urlRequest)
+        #endif
+
         do {
             let (data, response) = try await session.data(for: urlRequest)
+            #if DEBUG
+            logResponse(response, data: data)
+            #endif
             try validate(response: response, data: data)
             return try decode(T.self, from: data)
         } catch NetworkError.tokenExpired {
             // 419 → 토큰 갱신 후 재시도
             urlRequest = try await interceptor.retry(urlRequest)
+            #if DEBUG
+            print("🔄 Retrying request after token refresh...")
+            logRequest(urlRequest)
+            #endif
             let (data, response) = try await session.data(for: urlRequest)
+            #if DEBUG
+            logResponse(response, data: data)
+            #endif
             try validate(response: response, data: data)
             return try decode(T.self, from: data)
+        } catch {
+            #if DEBUG
+            print("❌ Network Request Error: \(error)")
+            #endif
+            throw error
         }
     }
 
@@ -60,17 +79,64 @@ final class NetworkManager {
             urlRequest = try await interceptor.adapt(urlRequest)
         }
 
+        #if DEBUG
+        logRequest(urlRequest)
+        #endif
+
         do {
             let (data, response) = try await session.data(for: urlRequest)
+            #if DEBUG
+            logResponse(response, data: data)
+            #endif
             try validate(response: response, data: data)
         } catch NetworkError.tokenExpired {
             urlRequest = try await interceptor.retry(urlRequest)
+            #if DEBUG
+            print("🔄 Retrying request after token refresh...")
+            logRequest(urlRequest)
+            #endif
             let (data, response) = try await session.data(for: urlRequest)
+            #if DEBUG
+            logResponse(response, data: data)
+            #endif
             try validate(response: response, data: data)
+        } catch {
+            #if DEBUG
+            print("❌ Network Request Error: \(error)")
+            #endif
+            throw error
         }
     }
 
     // MARK: - Private
+
+    #if DEBUG
+    private func logRequest(_ request: URLRequest) {
+        print("\n--- 🚀 [OUTGOING REQUEST] ---")
+        print("URL: \(request.url?.absoluteString ?? "Invalid URL")")
+        print("Method: \(request.httpMethod ?? "N/A")")
+        if let headers = request.allHTTPHeaderFields, !headers.isEmpty {
+            print("Headers: \(headers)")
+        }
+        if let body = request.httpBody, let bodyString = String(data: body, encoding: .utf8) {
+            print("Body: \(bodyString)")
+        }
+        print("-----------------------------\n")
+    }
+
+    private func logResponse(_ response: URLResponse, data: Data) {
+        print("\n--- ✅ [INCOMING RESPONSE] ---")
+        if let httpResponse = response as? HTTPURLResponse {
+            print("Status Code: \(httpResponse.statusCode)")
+        }
+        if let responseString = String(data: data, encoding: .utf8), !responseString.isEmpty {
+            print("Data: \(responseString)")
+        } else {
+            print("Data: (Empty or non-textual)")
+        }
+        print("------------------------------\n")
+    }
+    #endif
 
     private func buildRequest(from endpoint: any Endpoint) throws -> URLRequest {
         guard let url = URL(string: endpoint.baseURL + endpoint.path) else {
@@ -136,6 +202,12 @@ final class NetworkManager {
         do {
             return try JSONDecoder().decode(type, from: data)
         } catch {
+            #if DEBUG
+            print("⚠️ Decoding Error: \(error)")
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("Failed Data: \(jsonString)")
+            }
+            #endif
             throw NetworkError.decodingError
         }
     }
