@@ -1,4 +1,5 @@
 import SwiftUI
+import AuthenticationServices
 
 struct LoginView: View {
     @Environment(AuthSession.self) private var authSession
@@ -19,7 +20,7 @@ struct LoginView: View {
 
                 loginButton
 
-                // TODO: Step 8 - Apple 로그인 버튼
+                appleLoginButton
 
                 joinLink
 
@@ -90,6 +91,23 @@ struct LoginView: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .disabled(!viewModel.canSubmit || viewModel.isLoading)
+    }
+
+    private var appleLoginButton: some View {
+        SignInWithAppleButton(.signIn) { request in
+            request.requestedScopes = [.email, .fullName]
+        } onCompletion: { result in
+            Task {
+                if let tokens = await viewModel.handleAppleLoginResult(result) {
+                    authSession.login(tokens: tokens)
+                }
+            }
+        }
+        .frame(height: 52)
+        .signInWithAppleButtonStyle(.black)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(.top, 8)
+        .disabled(viewModel.isLoading)
     }
 
     private var joinLink: some View {
