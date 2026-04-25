@@ -14,7 +14,10 @@ struct TabBarView: View {
                 .foregroundStyle(YPColor.textSecondary)
 
             Button("로그아웃") {
-                authSession.logout()
+                Task {
+                    try? await LoginClient().logout()
+                    authSession.logout()
+                }
             }
             .font(YPFont.body2)
             .foregroundStyle(YPColor.gray0)
