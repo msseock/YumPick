@@ -8,6 +8,8 @@ final class KeychainManager {
     enum Key: String {
         case accessToken  = "com.yumpick.accessToken"
         case refreshToken = "com.yumpick.refreshToken"
+        case userID       = "com.yumpick.userID"
+        case nick         = "com.yumpick.nick"
     }
 
     func save(key: Key, value: String) {

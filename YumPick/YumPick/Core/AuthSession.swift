@@ -14,6 +14,8 @@ final class AuthSession {
     }
 
     var state: State = .checking
+    private(set) var userID: String?
+    private(set) var nick: String?
 
     private let keychain: KeychainManager
 
@@ -24,12 +26,19 @@ final class AuthSession {
     func restore() {
         let accessToken = keychain.read(key: .accessToken)
         let refreshToken = keychain.read(key: .refreshToken)
+        self.userID = keychain.read(key: .userID)
+        self.nick = keychain.read(key: .nick)
         state = (accessToken != nil && refreshToken != nil) ? .authenticated : .unauthenticated
     }
 
-    func login(accessToken: String, refreshToken: String) {
-        keychain.save(key: .accessToken, value: accessToken)
-        keychain.save(key: .refreshToken, value: refreshToken)
+    func login(tokens: AuthTokenBundle) {
+        keychain.save(key: .accessToken, value: tokens.accessToken)
+        keychain.save(key: .refreshToken, value: tokens.refreshToken)
+        keychain.save(key: .userID, value: tokens.userID)
+        keychain.save(key: .nick, value: tokens.nick)
+        
+        self.userID = tokens.userID
+        self.nick = tokens.nick
         state = .authenticated
     }
 
@@ -46,5 +55,9 @@ final class AuthSession {
     private func clearTokens() {
         keychain.delete(key: .accessToken)
         keychain.delete(key: .refreshToken)
+        keychain.delete(key: .userID)
+        keychain.delete(key: .nick)
+        self.userID = nil
+        self.nick = nil
     }
 }

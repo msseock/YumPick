@@ -15,7 +15,6 @@ final class JoinViewModel {
 
     var isLoading = false
     var errorMessage: String?
-    var joinTokens: AuthTokenBundle?
 
     // MARK: - Validation errors (per-field)
 
@@ -71,15 +70,16 @@ final class JoinViewModel {
         }
     }
 
-    func submitTapped() async {
-        guard canSubmit else { return }
+    func submitTapped() async -> AuthTokenBundle? {
+        guard canSubmit else { return nil }
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
         do {
-            joinTokens = try await client.join(email: email, password: password, nick: nick)
+            return try await client.join(email: email, password: password, nick: nick)
         } catch {
             errorMessage = error.localizedDescription
+            return nil
         }
     }
 

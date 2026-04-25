@@ -1,14 +1,5 @@
 import Foundation
 
-// MARK: - Shared DTO
-
-struct AuthTokenBundle: Equatable {
-    let accessToken: String
-    let refreshToken: String
-    let userID: String
-    let nick: String
-}
-
 // MARK: - Protocol
 
 protocol JoinClientProtocol {
