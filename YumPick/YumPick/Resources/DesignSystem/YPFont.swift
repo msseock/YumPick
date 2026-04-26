@@ -16,12 +16,18 @@ enum YPFont {
     /// 20px, Bold (화면 기본 타이틀)
     static let title1 = pretendard(.bold, size: 20)
     
+    /// 16px, Bold
+    static let body1Bold = pretendard(.bold, size: 16)
     /// 16px, Medium (기본 본문, 주요 정보)
     static let body1 = pretendard(.medium, size: 16)
-    
+
+    /// 14px, Bold
+    static let body2Bold = pretendard(.bold, size: 14)
     /// 14px, Medium (보조 본문)
     static let body2 = pretendard(.medium, size: 14)
-    
+
+    /// 13px, Bold
+    static let body3Bold = pretendard(.bold, size: 13)
     /// 13px, Medium (작은 본문)
     static let body3 = pretendard(.medium, size: 13)
     
