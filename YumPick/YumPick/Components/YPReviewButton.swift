@@ -31,7 +31,7 @@ struct YPReviewButton: View {
                         .foregroundStyle(YPColor.textSecondary)
                 }
             }
-            .frame(width: 318, height: 40)
+            .frame(maxWidth: .infinity, maxHeight: 40)
             .background(Color.clear)
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
