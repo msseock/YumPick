@@ -2,31 +2,66 @@ import SwiftUI
 
 struct TabBarView: View {
     @Environment(AuthSession.self) private var authSession
+    @State private var selectedTab: YPTab = .home
 
     var body: some View {
-        VStack(spacing: 24) {
-            Text("얌픽")
+        ZStack(alignment: .bottom) {
+            tabContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            YPTabBar(selectedTab: $selectedTab)
+        }
+        .ignoresSafeArea(edges: .bottom)
+        .background(YPColor.backgroundPrimary)
+    }
+
+    @ViewBuilder
+    private var tabContent: some View {
+        switch selectedTab {
+        case .home:
+            Text("홈")
                 .font(YPFont.title1)
                 .foregroundStyle(YPColor.textPrimary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            Text("로그인 성공")
-                .font(YPFont.body1)
-                .foregroundStyle(YPColor.textSecondary)
+        case .order:
+            Text("주문")
+                .font(YPFont.title1)
+                .foregroundStyle(YPColor.textPrimary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            Button("로그아웃") {
-                Task {
-                    try? await LoginClient().logout()
-                    authSession.logout()
+        case .pick:
+            Text("픽업")
+                .font(YPFont.title1)
+                .foregroundStyle(YPColor.textPrimary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+        case .community:
+            Text("커뮤니티")
+                .font(YPFont.title1)
+                .foregroundStyle(YPColor.textPrimary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+        case .profile:
+            VStack(spacing: 24) {
+                Text("마이페이지")
+                    .font(YPFont.title1)
+                    .foregroundStyle(YPColor.textPrimary)
+
+                Button("로그아웃") {
+                    Task {
+                        try? await LoginClient().logout()
+                        authSession.logout()
+                    }
                 }
+                .font(YPFont.body2)
+                .foregroundStyle(YPColor.backgroundPrimary)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                .background(YPColor.actionPrimary)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
             }
-            .font(YPFont.body2)
-            .foregroundStyle(YPColor.gray0)
-            .padding(.horizontal, 24)
-            .padding(.vertical, 12)
-            .background(YPColor.actionPrimary)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(YPColor.backgroundPrimary)
     }
 }
