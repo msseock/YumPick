@@ -1,13 +1,18 @@
 import SwiftUI
 
 struct TabBarView: View {
-    @Environment(AuthSession.self) private var authSession
     @State private var selectedTab: YPTab = .home
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            tabContent
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            ZStack {
+                LazyTabView(isSelected: selectedTab == .home)        { HomeTabView() }
+                LazyTabView(isSelected: selectedTab == .order)       { OrderTabView() }
+                LazyTabView(isSelected: selectedTab == .pick)        { PickTabView() }
+                LazyTabView(isSelected: selectedTab == .community)   { CommunityTabView() }
+                LazyTabView(isSelected: selectedTab == .profile)     { ProfileTabView() }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             YPTabBar(selectedTab: $selectedTab)
         }
