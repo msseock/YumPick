@@ -60,3 +60,8 @@ enum YPColor {
     static let actionPrimaryPressed = brandDeepSprout
     static let actionAccent = brandBrightForsythia
 }
+
+// MARK: - 추가 색상
+extension YPColor {
+    static let brandBlackSproutDeep = Color(hex: "#82957B")
+}
