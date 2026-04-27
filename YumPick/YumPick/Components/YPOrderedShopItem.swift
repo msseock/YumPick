@@ -58,7 +58,7 @@ struct YPOrderedShopItem: View {
                 .font(YPFont.caption1)
                 .foregroundStyle(YPColor.textTertiary)
 
-            Text(DateFormatManager.orderDate(from: paidAt))
+            Text(DateFormatManager.shared.orderDate(from: paidAt))
                 .font(YPFont.caption1)
                 .foregroundStyle(YPColor.borderDefault)
         }
