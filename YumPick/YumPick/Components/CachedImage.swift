@@ -1,9 +1,15 @@
 import Foundation
-import SwiftUI
 import Kingfisher
+import SwiftUI
 
 struct CachedImage: View {
     let path: String?
+    var onImageLoaded: ((CGSize) -> Void)?
+
+    init(path: String?, onImageLoaded: ((CGSize) -> Void)? = nil) {
+        self.path = path
+        self.onImageLoaded = onImageLoaded
+    }
 
     var body: some View {
         switch imageSource {
@@ -11,10 +17,20 @@ struct CachedImage: View {
             KFImage(imageURL)
                 .placeholder { placeholder(for: .empty) }
                 .onFailureView { placeholder(for: .fetchFailed) }
+                .onSuccess { result in
+                    onImageLoaded?(result.image.size)
+                }
                 .requestModifier { request in
-                    request.setValue(SecretConstants.sesacKey, forHTTPHeaderField: "SeSACKey")
+                    request.setValue(
+                        SecretConstants.sesacKey,
+                        forHTTPHeaderField: "SeSACKey"
+                    )
+                    
                     if let accessToken = KeychainManager.shared.read(key: .accessToken) {
-                        request.setValue(accessToken, forHTTPHeaderField: "Authorization")
+                        request.setValue(
+                            accessToken,
+                            forHTTPHeaderField: "Authorization"
+                        )
                     }
                 }
                 .resizable()
