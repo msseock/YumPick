@@ -120,17 +120,20 @@ struct HomeView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 12) {
                     ForEach(viewModel.nearbyStores) { store in
-                        YPPopularShopCard(
-                            imagePath: store.store_image_urls?.first,
-                            shopName: store.name ?? "",
-                            pickupCount: store.pick_count ?? 0,
-                            distance: store.distance.map { String(format: "%.0fm", $0) } ?? "",
-                            closeTime: store.close ?? "",
-                            visitCount: store.total_order_count ?? 0,
-                            isLiked: store.is_pick ?? false,
-                            isPickchelin: store.is_picchelin ?? false,
-                            onLikeTapped: {}
-                        )
+                        NavigationLink(value: HomePath.storeDetail(storeId: store.store_id)) {
+                            YPPopularShopCard(
+                                imagePath: store.store_image_urls?.first,
+                                shopName: store.name ?? "",
+                                pickupCount: store.pick_count ?? 0,
+                                distance: store.distance.map { String(format: "%.0fm", $0) } ?? "",
+                                closeTime: store.close ?? "",
+                                visitCount: store.total_order_count ?? 0,
+                                isLiked: store.is_pick ?? false,
+                                isPickchelin: store.is_picchelin ?? false,
+                                onLikeTapped: {}
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, 16)
@@ -152,17 +155,20 @@ struct HomeView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 12) {
                     ForEach(viewModel.popularStores) { store in
-                        YPPopularShopCard(
-                            imagePath: store.store_image_urls?.first,
-                            shopName: store.name ?? "",
-                            pickupCount: store.pick_count ?? 0,
-                            distance: "",
-                            closeTime: store.close ?? "",
-                            visitCount: store.total_order_count ?? 0,
-                            isLiked: store.is_pick ?? false,
-                            isPickchelin: store.is_picchelin ?? false,
-                            onLikeTapped: {}
-                        )
+                        NavigationLink(value: HomePath.storeDetail(storeId: store.store_id)) {
+                            YPPopularShopCard(
+                                imagePath: store.store_image_urls?.first,
+                                shopName: store.name ?? "",
+                                pickupCount: store.pick_count ?? 0,
+                                distance: "",
+                                closeTime: store.close ?? "",
+                                visitCount: store.total_order_count ?? 0,
+                                isLiked: store.is_pick ?? false,
+                                isPickchelin: store.is_picchelin ?? false,
+                                onLikeTapped: {}
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, 16)
