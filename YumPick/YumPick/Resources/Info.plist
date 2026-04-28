@@ -13,6 +13,8 @@
 		<string>Pretendard-Medium.otf</string>
 		<string>Pretendard-Regular.otf</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>주변 가게를 찾기 위해 위치 정보를 사용합니다.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
