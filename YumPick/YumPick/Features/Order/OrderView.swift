@@ -5,18 +5,32 @@ struct OrderView: View {
 
     var body: some View {
         Group {
-            if viewModel.isLoading {
+            if viewModel.isLoading && viewModel.orders.isEmpty {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                Text("주문")
-                    .font(YPFont.title1)
-                    .foregroundStyle(YPColor.textPrimary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        ForEach(viewModel.orders) { order in
+                            YPOrderedShopItem(
+                                imagePath: order.store.store_image_urls?.first,
+                                shopName: order.store.name ?? "",
+                                orderCode: order.order_code,
+                                paidAt: order.paidAt,
+                                menuNames: order.order_menu_list.compactMap { $0.menu.name },
+                                totalPrice: Int(order.total_price),
+                                reviewRating: order.review?.rating,
+                                onDetailTapped: {},
+                                onReviewTapped: {}
+                            )
+                        }
+                    }
+                    .padding(16)
+                }
             }
         }
         .task {
-            await viewModel.fetchContent()
+            await viewModel.fetchOrders()
         }
     }
 }

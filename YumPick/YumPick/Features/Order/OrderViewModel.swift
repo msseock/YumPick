@@ -2,6 +2,7 @@ import Foundation
 
 @Observable
 final class OrderViewModel {
+    var orders: [Order] = []
     var isLoading = false
     var errorMessage: String? = nil
 
@@ -11,11 +12,11 @@ final class OrderViewModel {
         self.client = client
     }
 
-    func fetchContent() async {
+    func fetchOrders() async {
         isLoading = true
         defer { isLoading = false }
         do {
-            try await client.fetchContent()
+            orders = try await client.fetchOrders()
         } catch {
             errorMessage = error.localizedDescription
         }
