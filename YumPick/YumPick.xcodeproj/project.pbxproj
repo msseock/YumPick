@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C56B7AB82FA07BB400516EC7 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = C56B7AB72FA07BB400516EC7 /* FirebaseMessaging */; };
 		C5BC43D62F991D530014A0AF /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = C5BC43D52F991D530014A0AF /* Kingfisher */; };
 /* End PBXBuildFile section */
 
@@ -69,6 +70,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C56B7AB82FA07BB400516EC7 /* FirebaseMessaging in Frameworks */,
 				C5BC43D62F991D530014A0AF /* Kingfisher in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -131,6 +133,7 @@
 			name = YumPick;
 			packageProductDependencies = (
 				C5BC43D52F991D530014A0AF /* Kingfisher */,
+				C56B7AB72FA07BB400516EC7 /* FirebaseMessaging */,
 			);
 			productName = YumPick;
 			productReference = C5BC43A72F99051F0014A0AF /* YumPick.app */;
@@ -216,6 +219,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				C5BC43D42F991D530014A0AF /* XCRemoteSwiftPackageReference "Kingfisher" */,
+				C56B7AB62FA07BB400516EC7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C5BC43A82F99051F0014A0AF /* Products */;
@@ -418,9 +422,11 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = YumPick/YumPick.entitlements;
-				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = ZUGAVD3728;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = ZUGAVD3728;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = YumPick/Resources/Info.plist;
@@ -438,6 +444,8 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.msseock.YumPick;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = dev_yumyumpick;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -458,9 +466,11 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = YumPick/YumPick.entitlements;
-				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = ZUGAVD3728;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = ZUGAVD3728;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = YumPick/Resources/Info.plist;
@@ -478,6 +488,8 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.msseock.YumPick;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = dev_yumyumpick;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -618,6 +630,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		C56B7AB62FA07BB400516EC7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.12.1;
+			};
+		};
 		C5BC43D42F991D530014A0AF /* XCRemoteSwiftPackageReference "Kingfisher" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/onevcat/Kingfisher.git";
@@ -629,6 +649,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		C56B7AB72FA07BB400516EC7 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C56B7AB62FA07BB400516EC7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
 		C5BC43D52F991D530014A0AF /* Kingfisher */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = C5BC43D42F991D530014A0AF /* XCRemoteSwiftPackageReference "Kingfisher" */;
