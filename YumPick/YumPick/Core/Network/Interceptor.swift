@@ -41,19 +41,32 @@ final class Interceptor: InterceptorProtocol {
             throw NetworkError.refreshTokenExpired
         }
 
-        let newTokens = try await refreshAccessToken(refreshToken: refreshToken)
+        guard let accessToken = keychain.read(key: .accessToken) else {
+            await onSessionExpired()
+            throw NetworkError.refreshTokenExpired
+        }
+
+        let newTokens = try await refreshAccessToken(
+            accessToken: accessToken,
+            refreshToken: refreshToken
+        )
+        
         keychain.save(key: .accessToken, value: newTokens.accessToken)
         keychain.save(key: .refreshToken, value: newTokens.refreshToken)
         return newTokens
     }
 
-    private func refreshAccessToken(refreshToken: String) async throws -> RefreshedAuthTokens {
+    private func refreshAccessToken(
+        accessToken: String,
+        refreshToken: String
+    ) async throws -> RefreshedAuthTokens {
         guard let url = URL(string: SecretConstants.baseURL + "/v1/auth/refresh") else {
             throw NetworkError.invalidURL
         }
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
+        request.setValue(accessToken, forHTTPHeaderField: "Authorization")
         request.setValue(refreshToken, forHTTPHeaderField: "RefreshToken")
         request.setValue(SecretConstants.sesacKey, forHTTPHeaderField: "SeSACKey")
 
