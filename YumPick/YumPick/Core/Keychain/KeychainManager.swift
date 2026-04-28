@@ -81,5 +81,7 @@ final class KeychainManager {
         #endif
         delete(key: .accessToken)
         delete(key: .refreshToken)
+        delete(key: .userID)
+        delete(key: .nick)
     }
 }

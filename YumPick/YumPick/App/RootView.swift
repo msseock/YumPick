@@ -16,7 +16,7 @@ struct RootView: View {
         }
         .task {
             if authSession.state == .checking {
-                authSession.restore()
+                await authSession.restore()
             }
         }
     }

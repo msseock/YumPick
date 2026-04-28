@@ -23,12 +23,30 @@ final class AuthSession {
         self.keychain = keychain
     }
 
-    func restore() {
+    func restore() async {
         let accessToken = keychain.read(key: .accessToken)
         let refreshToken = keychain.read(key: .refreshToken)
         self.userID = keychain.read(key: .userID)
         self.nick = keychain.read(key: .nick)
-        state = (accessToken != nil && refreshToken != nil) ? .authenticated : .unauthenticated
+
+        guard refreshToken != nil else {
+            clearTokens()
+            state = .unauthenticated
+            return
+        }
+
+        if let accessToken, !accessToken.isExpiredJWT {
+            state = .authenticated
+            return
+        }
+
+        do {
+            try await NetworkManager.shared.refreshAuthorization()
+            state = .authenticated
+        } catch {
+            clearTokens()
+            state = .expired
+        }
     }
 
     func login(tokens: AuthTokenBundle) {
@@ -59,5 +77,41 @@ final class AuthSession {
         keychain.delete(key: .nick)
         self.userID = nil
         self.nick = nil
+    }
+}
+
+private extension String {
+    var isExpiredJWT: Bool {
+        guard
+            let payload = jwtPayload,
+            let exp = payload["exp"] as? NSNumber
+        else {
+            return true
+        }
+
+        return Date().timeIntervalSince1970 >= exp.doubleValue
+    }
+
+    var jwtPayload: [String: Any]? {
+        let parts = split(separator: ".")
+        guard parts.count >= 2 else { return nil }
+
+        var base64 = String(parts[1])
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+
+        let padding = 4 - base64.count % 4
+        if padding < 4 {
+            base64.append(String(repeating: "=", count: padding))
+        }
+
+        guard
+            let data = Data(base64Encoded: base64),
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else {
+            return nil
+        }
+
+        return json
     }
 }

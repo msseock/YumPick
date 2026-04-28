@@ -29,6 +29,10 @@ final class NetworkManager {
         shared.interceptor = Interceptor(onSessionExpired: onSessionExpired)
     }
 
+    func refreshAuthorization() async throws {
+        _ = try await interceptor.refreshTokens()
+    }
+
     func request<T: Decodable>(
         _ endpoint: any Endpoint,
         responseType: T.Type = T.self

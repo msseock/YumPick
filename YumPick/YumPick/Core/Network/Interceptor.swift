@@ -3,6 +3,7 @@ import Foundation
 protocol InterceptorProtocol {
     func adapt(_ request: URLRequest) async throws -> URLRequest
     func retry(_ request: URLRequest) async throws -> URLRequest
+    func refreshTokens() async throws -> RefreshedAuthTokens
 }
 
 final class Interceptor: InterceptorProtocol {
@@ -27,6 +28,14 @@ final class Interceptor: InterceptorProtocol {
 
     // 419 응답 시 리프레시 토큰으로 액세스 토큰 갱신 후 재요청용 URLRequest 반환
     func retry(_ request: URLRequest) async throws -> URLRequest {
+        let newTokens = try await refreshTokens()
+
+        var retryRequest = request
+        retryRequest.setValue(newTokens.accessToken, forHTTPHeaderField: "Authorization")
+        return retryRequest
+    }
+
+    func refreshTokens() async throws -> RefreshedAuthTokens {
         guard let refreshToken = keychain.read(key: .refreshToken) else {
             await onSessionExpired()
             throw NetworkError.refreshTokenExpired
@@ -35,13 +44,10 @@ final class Interceptor: InterceptorProtocol {
         let newTokens = try await refreshAccessToken(refreshToken: refreshToken)
         keychain.save(key: .accessToken, value: newTokens.accessToken)
         keychain.save(key: .refreshToken, value: newTokens.refreshToken)
-
-        var retryRequest = request
-        retryRequest.setValue(newTokens.accessToken, forHTTPHeaderField: "Authorization")
-        return retryRequest
+        return newTokens
     }
 
-    private func refreshAccessToken(refreshToken: String) async throws -> RefreshTokenResponse {
+    private func refreshAccessToken(refreshToken: String) async throws -> RefreshedAuthTokens {
         guard let url = URL(string: SecretConstants.baseURL + "/v1/auth/refresh") else {
             throw NetworkError.invalidURL
         }
@@ -60,10 +66,8 @@ final class Interceptor: InterceptorProtocol {
         let status = HTTPStatusCode(rawValue: httpResponse.statusCode)
         switch status {
         case .ok:
-            return try JSONDecoder().decode(RefreshTokenResponse.self, from: data)
-        case .unauthorized:
-            throw NetworkError.unauthorized
-        case .refreshTokenExpired:
+            return try JSONDecoder().decode(RefreshedAuthTokens.self, from: data)
+        case .unauthorized, .refreshTokenExpired:
             await onSessionExpired()
             throw NetworkError.refreshTokenExpired
         default:
@@ -72,7 +76,7 @@ final class Interceptor: InterceptorProtocol {
     }
 }
 
-private struct RefreshTokenResponse: Decodable {
+struct RefreshedAuthTokens: Decodable {
     let accessToken: String
     let refreshToken: String
 }

@@ -20,6 +20,7 @@ final class ProfileViewModel {
             didLogout = true
         } catch {
             errorMessage = error.localizedDescription
+            didLogout = true
         }
     }
 }
