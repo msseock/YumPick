@@ -57,11 +57,19 @@ final class Interceptor: InterceptorProtocol {
         request.setValue(refreshToken, forHTTPHeaderField: "RefreshToken")
         request.setValue(SecretConstants.sesacKey, forHTTPHeaderField: "SeSACKey")
 
+        #if DEBUG
+        logRefreshRequest(request)
+        #endif
+
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NetworkError.invalidResponse
         }
+
+        #if DEBUG
+        logRefreshResponse(httpResponse, data: data)
+        #endif
 
         let status = HTTPStatusCode(rawValue: httpResponse.statusCode)
         switch status {
@@ -74,6 +82,29 @@ final class Interceptor: InterceptorProtocol {
             throw NetworkError.unknown
         }
     }
+
+    #if DEBUG
+    private func logRefreshRequest(_ request: URLRequest) {
+        print("\n--- 🔄 [REFRESH TOKEN REQUEST] ---")
+        print("URL: \(request.url?.absoluteString ?? "Invalid URL")")
+        print("Method: \(request.httpMethod ?? "N/A")")
+        if let headers = request.allHTTPHeaderFields, !headers.isEmpty {
+            print("Headers: \(headers)")
+        }
+        print("----------------------------------\n")
+    }
+
+    private func logRefreshResponse(_ response: HTTPURLResponse, data: Data) {
+        print("\n--- 🔄 [REFRESH TOKEN RESPONSE] ---")
+        print("Status Code: \(response.statusCode)")
+        if let responseString = String(data: data, encoding: .utf8), !responseString.isEmpty {
+            print("Data: \(responseString)")
+        } else {
+            print("Data: (Empty or non-textual)")
+        }
+        print("-----------------------------------\n")
+    }
+    #endif
 }
 
 struct RefreshedAuthTokens: Decodable {

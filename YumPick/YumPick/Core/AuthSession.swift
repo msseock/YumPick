@@ -44,6 +44,7 @@ final class AuthSession {
             try await NetworkManager.shared.refreshAuthorization()
             state = .authenticated
         } catch {
+            print("AuthSession restore failed")
             clearTokens()
             state = .expired
         }
