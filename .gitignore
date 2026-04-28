@@ -91,6 +91,7 @@ iOSInjectionProject/
 
 # Security
 **/SecretConstants.swift
+**/GoogleService-Info.plist
 
 # Guidance
 CLAUDE.md
