@@ -4,6 +4,7 @@ struct HomeView: View {
     @State private var viewModel = HomeViewModel()
     @State private var bannerPage = 0
     @State private var bannerAspectRatios: [Int: CGFloat] = [:]
+    @State private var bannerWebViewRoute: HomeBannerWebViewRoute?
 
     private let defaultBannerAspectRatio: CGFloat = 390 / 140
 
@@ -29,6 +30,9 @@ struct HomeView: View {
         .task {
             await viewModel.fetchContent()
         }
+        .sheet(item: $bannerWebViewRoute) { route in
+            HomeBannerWebViewScreen(url: route.url)
+        }
     }
 
     // MARK: - Banner
@@ -44,14 +48,19 @@ struct HomeView: View {
                 ForEach(Array(viewModel.banners.enumerated()), id: \.offset) {
                     index,
                     banner in
-                    CachedImage(path: banner.imageUrl) { imageSize in
-                        updateBannerAspectRatio(
-                            for: index,
-                            imageSize: imageSize
-                        )
+                    Button {
+                        bannerWebViewRoute = viewModel.webViewRoute(for: banner)
+                    } label: {
+                        CachedImage(path: banner.imageUrl) { imageSize in
+                            updateBannerAspectRatio(
+                                for: index,
+                                imageSize: imageSize
+                            )
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .clipped()
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .clipped()
+                    .buttonStyle(.plain)
                     .tag(index)
                 }
             }
