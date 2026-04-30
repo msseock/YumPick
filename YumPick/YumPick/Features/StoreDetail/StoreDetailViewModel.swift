@@ -88,6 +88,7 @@ final class StoreDetailViewModel {
             let status = try await client.toggleLike(storeId: storeId, likeStatus: isLiked)
             isLiked = status
             pickCount = prevCount + (status ? 1 : -1)
+            LikeStateStore.shared.update(storeId: storeId, isLiked: status)
         } catch {
             isLiked = prevLiked
             pickCount = prevCount

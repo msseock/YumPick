@@ -53,7 +53,8 @@ final class HomeViewModel {
         guard popularIdx != nil || nearbyIdx != nil else { return }
 
         func toggled(_ store: StoreSummary) -> StoreSummary {
-            let newPick = !(store.is_pick ?? false)
+            let currentLiked = LikeStateStore.shared.isLiked(for: store.store_id, fallback: store.is_pick ?? false)
+            let newPick = !currentLiked
             return StoreSummary(
                 store_id: store.store_id, category: store.category, name: store.name,
                 close: store.close, store_image_urls: store.store_image_urls,
@@ -79,6 +80,7 @@ final class HomeViewModel {
 
         do {
             _ = try await client.toggleLike(storeId: storeId, likeStatus: newLikeStatus)
+            LikeStateStore.shared.update(storeId: storeId, isLiked: newLikeStatus)
         } catch {
             if let i = popularIdx, let original = originalPopular { popularStores[i] = original }
             if let i = nearbyIdx, let original = originalNearby { nearbyStores[i] = original }

@@ -137,7 +137,7 @@ struct HomeView: View {
                                 distance: store.distance.map { String(format: "%.0fm", $0) } ?? "",
                                 closeTime: store.close ?? "",
                                 visitCount: store.total_order_count ?? 0,
-                                isLiked: store.is_pick ?? false,
+                                isLiked: LikeStateStore.shared.isLiked(for: store.store_id, fallback: store.is_pick ?? false),
                                 isPickchelin: store.is_picchelin ?? false,
                                 onLikeTapped: {
                                     Task { await viewModel.toggleLike(storeId: store.store_id) }
@@ -174,7 +174,7 @@ struct HomeView: View {
                                 distance: "",
                                 closeTime: store.close ?? "",
                                 visitCount: store.total_order_count ?? 0,
-                                isLiked: store.is_pick ?? false,
+                                isLiked: LikeStateStore.shared.isLiked(for: store.store_id, fallback: store.is_pick ?? false),
                                 isPickchelin: store.is_picchelin ?? false,
                                 onLikeTapped: {
                                     Task { await viewModel.toggleLike(storeId: store.store_id) }
