@@ -139,7 +139,9 @@ struct HomeView: View {
                                 visitCount: store.total_order_count ?? 0,
                                 isLiked: store.is_pick ?? false,
                                 isPickchelin: store.is_picchelin ?? false,
-                                onLikeTapped: {}
+                                onLikeTapped: {
+                                    Task { await viewModel.toggleLike(storeId: store.store_id) }
+                                }
                             )
                         }
                         .buttonStyle(.plain)
@@ -174,7 +176,9 @@ struct HomeView: View {
                                 visitCount: store.total_order_count ?? 0,
                                 isLiked: store.is_pick ?? false,
                                 isPickchelin: store.is_picchelin ?? false,
-                                onLikeTapped: {}
+                                onLikeTapped: {
+                                    Task { await viewModel.toggleLike(storeId: store.store_id) }
+                                }
                             )
                         }
                         .buttonStyle(.plain)

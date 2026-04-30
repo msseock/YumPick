@@ -4,19 +4,19 @@ import Foundation
 
 protocol StoreDetailClientProtocol {
     func fetchStoreDetail(storeId: String) async throws -> StoreDetail
-    func toggleLike(storeId: String) async throws -> Bool
+    func toggleLike(storeId: String, likeStatus: Bool) async throws -> Bool
 }
 
 // MARK: - Endpoints
 
 private enum StoreDetailEndpoint: Endpoint {
     case detail(storeId: String)
-    case like(storeId: String)
+    case like(storeId: String, likeStatus: Bool)
 
     var path: String {
         switch self {
         case .detail(let storeId): return "/v1/stores/\(storeId)"
-        case .like(let storeId): return "/v1/stores/\(storeId)/like"
+        case .like(let storeId, _): return "/v1/stores/\(storeId)/like"
         }
     }
 
@@ -27,11 +27,21 @@ private enum StoreDetailEndpoint: Endpoint {
         }
     }
 
-    var parameters: RequestParameters { .none }
+    var parameters: RequestParameters {
+        switch self {
+        case .detail: return .none
+        case .like(_, let likeStatus): return .body(LikeRequestBody(like_status: likeStatus))
+        }
+    }
+
     var requiresAuthorization: Bool { true }
 }
 
-// MARK: - Response DTOs
+// MARK: - Request / Response DTOs
+
+private struct LikeRequestBody: Encodable {
+    let like_status: Bool
+}
 
 private struct LikeStoreResponse: Decodable {
     let like_status: Bool
@@ -44,9 +54,9 @@ final class StoreDetailClient: StoreDetailClientProtocol {
         try await NetworkManager.shared.request(StoreDetailEndpoint.detail(storeId: storeId))
     }
 
-    func toggleLike(storeId: String) async throws -> Bool {
+    func toggleLike(storeId: String, likeStatus: Bool) async throws -> Bool {
         let response: LikeStoreResponse = try await NetworkManager.shared
-            .request(StoreDetailEndpoint.like(storeId: storeId))
+            .request(StoreDetailEndpoint.like(storeId: storeId, likeStatus: likeStatus))
         return response.like_status
     }
 }
@@ -61,7 +71,7 @@ final class MockStoreDetailClient: StoreDetailClientProtocol {
         try fetchStoreDetailResult.get()
     }
 
-    func toggleLike(storeId: String) async throws -> Bool {
+    func toggleLike(storeId: String, likeStatus: Bool) async throws -> Bool {
         try toggleLikeResult.get()
     }
 }

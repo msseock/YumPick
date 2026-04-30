@@ -44,6 +44,44 @@ final class HomeViewModel {
         await fetchNearbyStores()
     }
 
+    func toggleLike(storeId: String) async {
+        let popularIdx = popularStores.firstIndex(where: { $0.store_id == storeId })
+        let nearbyIdx = nearbyStores.firstIndex(where: { $0.store_id == storeId })
+        guard popularIdx != nil || nearbyIdx != nil else { return }
+
+        func toggled(_ store: StoreSummary) -> StoreSummary {
+            let newPick = !(store.is_pick ?? false)
+            return StoreSummary(
+                store_id: store.store_id, category: store.category, name: store.name,
+                close: store.close, store_image_urls: store.store_image_urls,
+                is_picchelin: store.is_picchelin, is_pick: newPick,
+                pick_count: (store.pick_count ?? 0) + (newPick ? 1 : -1),
+                hashTags: store.hashTags, total_rating: store.total_rating,
+                total_order_count: store.total_order_count,
+                total_review_count: store.total_review_count,
+                geolocation: store.geolocation, distance: store.distance,
+                createdAt: store.createdAt, updatedAt: store.updatedAt
+            )
+        }
+
+        let originalPopular = popularIdx.map { popularStores[$0] }
+        let originalNearby = nearbyIdx.map { nearbyStores[$0] }
+
+        if let i = popularIdx { popularStores[i] = toggled(popularStores[i]) }
+        if let i = nearbyIdx { nearbyStores[i] = toggled(nearbyStores[i]) }
+
+        let newLikeStatus = popularIdx.map { popularStores[$0].is_pick ?? false }
+            ?? nearbyIdx.map { nearbyStores[$0].is_pick ?? false }
+            ?? false
+
+        do {
+            _ = try await client.toggleLike(storeId: storeId, likeStatus: newLikeStatus)
+        } catch {
+            if let i = popularIdx, let original = originalPopular { popularStores[i] = original }
+            if let i = nearbyIdx, let original = originalNearby { nearbyStores[i] = original }
+        }
+    }
+
     func webViewRoute(for banner: Banner) -> HomeBannerWebViewRoute? {
         guard banner.payload.type == "WEBVIEW" else { return nil }
         guard let url = Self.resolveWebViewURL(from: banner.payload.value) else { return nil }

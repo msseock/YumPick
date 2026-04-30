@@ -7,15 +7,25 @@ protocol HomeClientProtocol {
     func fetchPopularStores(category: String?) async throws -> [StoreSummary]
     func fetchPopularSearches() async throws -> [String]
     func fetchNearbyStores(longitude: Double, latitude: Double, orderBy: String) async throws -> [StoreSummary]
+    func toggleLike(storeId: String, likeStatus: Bool) async throws -> Bool
 }
 
 // MARK: - Endpoints
+
+private struct LikeRequestBody: Encodable {
+    let like_status: Bool
+}
+
+private struct LikeStoreResponse: Decodable {
+    let like_status: Bool
+}
 
 private enum HomeEndpoint: Endpoint {
     case banners
     case popularStores(category: String?)
     case popularSearches
     case nearbyStores(longitude: Double, latitude: Double, orderBy: String)
+    case like(storeId: String, likeStatus: Bool)
 
     var path: String {
         switch self {
@@ -23,10 +33,16 @@ private enum HomeEndpoint: Endpoint {
         case .popularStores: return "/v1/stores/popular-stores"
         case .popularSearches: return "/v1/stores/searches-popular"
         case .nearbyStores: return "/v1/stores"
+        case .like(let storeId, _): return "/v1/stores/\(storeId)/like"
         }
     }
 
-    var method: HTTPMethod { .get }
+    var method: HTTPMethod {
+        switch self {
+        case .like: return .post
+        default: return .get
+        }
+    }
 
     var parameters: RequestParameters {
         switch self {
@@ -42,6 +58,8 @@ private enum HomeEndpoint: Endpoint {
                 "latitude": "\(latitude)",
                 "order_by": orderBy
             ])
+        case .like(_, let likeStatus):
+            return .body(LikeRequestBody(like_status: likeStatus))
         }
     }
 }
@@ -91,6 +109,12 @@ final class HomeClient: HomeClientProtocol {
             .request(HomeEndpoint.nearbyStores(longitude: longitude, latitude: latitude, orderBy: orderBy))
         return response.data
     }
+
+    func toggleLike(storeId: String, likeStatus: Bool) async throws -> Bool {
+        let response: LikeStoreResponse = try await NetworkManager.shared
+            .request(HomeEndpoint.like(storeId: storeId, likeStatus: likeStatus))
+        return response.like_status
+    }
 }
 
 // MARK: - Mock
@@ -115,5 +139,11 @@ final class MockHomeClient: HomeClientProtocol {
 
     func fetchNearbyStores(longitude: Double, latitude: Double, orderBy: String) async throws -> [StoreSummary] {
         try fetchNearbyStoresResult.get()
+    }
+
+    var toggleLikeResult: Result<Bool, Error> = .success(true)
+
+    func toggleLike(storeId: String, likeStatus: Bool) async throws -> Bool {
+        try toggleLikeResult.get()
     }
 }
