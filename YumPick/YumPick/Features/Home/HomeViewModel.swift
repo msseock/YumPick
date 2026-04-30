@@ -2,22 +2,76 @@ import Foundation
 
 private let seoulCityHall = Geolocation(longitude: 126.9780, latitude: 37.5665)
 
+enum HomePopularCategory: String, CaseIterable, Identifiable {
+    case coffee = "커피"
+    case fastFood = "패스트푸드"
+    case dessert = "디저트"
+    case bakery = "베이커리"
+    case more = "more"
+
+    var id: String { rawValue }
+    var title: String { rawValue }
+
+    var imageName: String {
+        switch self {
+        case .coffee: return "Coffee"
+        case .fastFood: return "FastFood"
+        case .dessert: return "Dessert"
+        case .bakery: return "Bakery"
+        case .more: return "More"
+        }
+    }
+}
+
+enum HomeNearbySort: String {
+    case distance
+    case orders
+    case reviews
+
+    var title: String {
+        switch self {
+        case .distance: return "거리순"
+        case .orders: return "주문순"
+        case .reviews: return "리뷰순"
+        }
+    }
+
+    var next: HomeNearbySort {
+        switch self {
+        case .distance: return .orders
+        case .orders: return .reviews
+        case .reviews: return .distance
+        }
+    }
+}
+
 struct HomeBannerWebViewRoute: Identifiable, Equatable {
     let url: URL
 
     var id: String { url.absoluteString }
 }
 
+@MainActor
 @Observable
 final class HomeViewModel {
     var banners: [Banner] = []
     var popularStores: [StoreSummary] = []
     var popularSearches: [String] = []
     var nearbyStores: [StoreSummary] = []
+    var selectedPopularCategory: HomePopularCategory? = nil
+    var nearbySort: HomeNearbySort = .distance
+    var isPickchelinFilterOn = false
+    var isMyPickFilterOn = false
+    var isNearbyPageLoading = false
+    var currentLocationTitle = "현재 위치"
     var isLoading = false
     var errorMessage: String? = nil
 
     private var hasLoaded = false
+    private var currentGeolocation: Geolocation?
+    private var nearbyNextCursor: String?
+    private var hasMoreNearbyStores = false
+    private var loadedNearbyCursors = Set<String>()
     private let client: HomeClientProtocol
     private let locationManager: any LocationManagerProtocol
 
@@ -29,8 +83,27 @@ final class HomeViewModel {
         self.locationManager = locationManager
     }
 
+    var filteredNearbyStores: [StoreSummary] {
+        guard isPickchelinFilterOn || isMyPickFilterOn else {
+            return nearbyStores
+        }
+
+        return nearbyStores.filter { store in
+            let matchesPickchelin = isPickchelinFilterOn && (store.is_picchelin ?? false)
+            let matchesMyPick = isMyPickFilterOn && LikeStateStore.shared.isLiked(
+                for: store.store_id,
+                fallback: store.is_pick ?? false
+            )
+            return matchesPickchelin || matchesMyPick
+        }
+    }
+
+    var canLoadMoreNearbyStores: Bool {
+        hasMoreNearbyStores && !isNearbyPageLoading
+    }
+
     func fetchContent() async {
-        guard !hasLoaded else { return }
+        guard !hasLoaded && !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
         do {
@@ -44,7 +117,33 @@ final class HomeViewModel {
         } catch {
             errorMessage = error.localizedDescription
         }
-        await fetchNearbyStores()
+        await refreshNearbyStores()
+    }
+
+    func selectPopularCategory(_ category: HomePopularCategory) async {
+        selectedPopularCategory = category
+        do {
+            popularStores = try await client.fetchPopularStores(category: category.title)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func advanceNearbySort() async {
+        nearbySort = nearbySort.next
+        await refreshNearbyStores()
+    }
+
+    func togglePickchelinFilter() {
+        isPickchelinFilterOn.toggle()
+    }
+
+    func toggleMyPickFilter() {
+        isMyPickFilterOn.toggle()
+    }
+
+    func loadMoreNearbyStores() async {
+        await fetchNearbyStores(reset: false)
     }
 
     func toggleLike(storeId: String) async {
@@ -106,16 +205,81 @@ final class HomeViewModel {
         return URL(string: base + path)
     }
 
-    private func fetchNearbyStores() async {
-        let geo = await locationManager.currentLocation() ?? seoulCityHall
+    private func refreshNearbyStores() async {
+        await fetchNearbyStores(reset: true)
+    }
+
+    private func fetchNearbyStores(reset: Bool) async {
+        guard reset || hasMoreNearbyStores else { return }
+        guard !isNearbyPageLoading else { return }
+
+        let requestedCursor = reset ? nil : nearbyNextCursor
+        if !reset {
+            guard let requestedCursor else {
+                hasMoreNearbyStores = false
+                return
+            }
+            guard !loadedNearbyCursors.contains(requestedCursor) else {
+                hasMoreNearbyStores = false
+                nearbyNextCursor = nil
+                return
+            }
+        }
+
+        if reset {
+            nearbyStores = []
+            nearbyNextCursor = nil
+            hasMoreNearbyStores = true
+            loadedNearbyCursors.removeAll()
+        }
+
+        isNearbyPageLoading = true
+        defer { isNearbyPageLoading = false }
+
+        let geo = await resolvedCurrentGeolocation()
         do {
-            nearbyStores = try await client.fetchNearbyStores(
+            let page = try await client.fetchNearbyStores(
                 longitude: geo.longitude,
                 latitude: geo.latitude,
-                orderBy: "distance"
+                orderBy: nearbySort.rawValue,
+                next: requestedCursor
             )
+
+            if let requestedCursor {
+                loadedNearbyCursors.insert(requestedCursor)
+            }
+
+            if reset {
+                nearbyStores = page.stores
+            } else {
+                nearbyStores.append(contentsOf: page.stores)
+            }
+
+            let hasNewStores = !page.stores.isEmpty
+
+            if hasNewStores,
+               let nextCursor = page.stores.last?.store_id,
+               nextCursor != requestedCursor,
+               !loadedNearbyCursors.contains(nextCursor)
+            {
+                nearbyNextCursor = nextCursor
+                hasMoreNearbyStores = true
+            } else {
+                nearbyNextCursor = nil
+                hasMoreNearbyStores = false
+            }
         } catch {
             errorMessage = error.localizedDescription
+            hasMoreNearbyStores = false
         }
+    }
+
+    private func resolvedCurrentGeolocation() async -> Geolocation {
+        if let currentGeolocation {
+            return currentGeolocation
+        }
+        let geo = await locationManager.currentLocation() ?? seoulCityHall
+        currentGeolocation = geo
+        return geo
     }
 }
