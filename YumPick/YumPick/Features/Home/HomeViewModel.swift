@@ -17,6 +17,7 @@ final class HomeViewModel {
     var isLoading = false
     var errorMessage: String? = nil
 
+    private var hasLoaded = false
     private let client: HomeClientProtocol
     private let locationManager: any LocationManagerProtocol
 
@@ -29,6 +30,7 @@ final class HomeViewModel {
     }
 
     func fetchContent() async {
+        guard !hasLoaded else { return }
         isLoading = true
         defer { isLoading = false }
         do {
@@ -38,6 +40,7 @@ final class HomeViewModel {
             self.banners = try await banners
             self.popularStores = try await popularStores
             self.popularSearches = try await popularSearches
+            hasLoaded = true
         } catch {
             errorMessage = error.localizedDescription
         }
