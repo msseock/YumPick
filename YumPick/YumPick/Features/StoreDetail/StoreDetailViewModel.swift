@@ -112,6 +112,25 @@ final class StoreDetailViewModel {
         selectedQuantities[menuId] ?? 0
     }
 
+    func makeCheckoutSelection() -> CheckoutSelection? {
+        guard let detail, totalQuantity > 0 else { return nil }
+        let items = selectedQuantities.compactMap { menuId, quantity -> CheckoutSelectionItem? in
+            guard let menu = detail.menu_list.first(where: { $0.menu_id == menuId }) else { return nil }
+            return CheckoutSelectionItem(
+                menuId: menuId,
+                name: menu.name ?? "",
+                price: menu.price ?? 0,
+                quantity: quantity
+            )
+        }
+        return CheckoutSelection(
+            storeId: storeId,
+            storeName: detail.name ?? "",
+            items: items,
+            totalPrice: totalPrice
+        )
+    }
+
     // MARK: - Private
 
     private func updateDistance(geolocation: Geolocation) async {
