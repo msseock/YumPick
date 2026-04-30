@@ -8,4 +8,10 @@ final class AppRouter {
     var pickPath: [PickPath] = []
     var communityPath: [CommunityPath] = []
     var profilePath: [ProfilePath] = []
+
+    private(set) var orderReloadToken: UUID = UUID()
+
+    func bumpOrderReload() {
+        orderReloadToken = UUID()
+    }
 }

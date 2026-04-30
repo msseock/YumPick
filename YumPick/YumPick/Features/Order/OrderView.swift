@@ -2,6 +2,7 @@ import SwiftUI
 
 struct OrderView: View {
     @State private var viewModel = OrderViewModel()
+    @Environment(AppRouter.self) private var router
 
     var body: some View {
         Group {
@@ -30,6 +31,9 @@ struct OrderView: View {
             }
         }
         .task {
+            await viewModel.fetchOrders()
+        }
+        .task(id: router.orderReloadToken) {
             await viewModel.fetchOrders()
         }
     }
