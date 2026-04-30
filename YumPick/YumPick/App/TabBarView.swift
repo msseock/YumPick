@@ -1,51 +1,42 @@
 import SwiftUI
 
 struct TabBarView: View {
-    @State private var selectedTab: YPTab = .home
-    @State private var homePath: [HomePath] = []
-    @State private var orderPath: [OrderPath] = []
-    @State private var pickPath: [PickPath] = []
-    @State private var communityPath: [CommunityPath] = []
-    @State private var profilePath: [ProfilePath] = []
+    @Environment(AppRouter.self) private var router
 
     private var shouldShowTabBar: Bool {
-        switch selectedTab {
-        case .home:
-            homePath.isEmpty
-        case .order:
-            orderPath.isEmpty
-        case .pick:
-            pickPath.isEmpty
-        case .community:
-            communityPath.isEmpty
-        case .profile:
-            profilePath.isEmpty
+        switch router.selectedTab {
+        case .home: router.homePath.isEmpty
+        case .order: router.orderPath.isEmpty
+        case .pick: router.pickPath.isEmpty
+        case .community: router.communityPath.isEmpty
+        case .profile: router.profilePath.isEmpty
         }
     }
 
     var body: some View {
+        @Bindable var router = router
         ZStack(alignment: .bottom) {
             ZStack {
-                LazyTabView(isSelected: selectedTab == .home) {
-                    HomeTabView(path: $homePath)
+                LazyTabView(isSelected: router.selectedTab == .home) {
+                    HomeTabView(path: $router.homePath)
                 }
-                LazyTabView(isSelected: selectedTab == .order) {
-                    OrderTabView(path: $orderPath)
+                LazyTabView(isSelected: router.selectedTab == .order) {
+                    OrderTabView(path: $router.orderPath)
                 }
-                LazyTabView(isSelected: selectedTab == .pick) {
-                    PickTabView(path: $pickPath)
+                LazyTabView(isSelected: router.selectedTab == .pick) {
+                    PickTabView(path: $router.pickPath)
                 }
-                LazyTabView(isSelected: selectedTab == .community) {
-                    CommunityTabView(path: $communityPath)
+                LazyTabView(isSelected: router.selectedTab == .community) {
+                    CommunityTabView(path: $router.communityPath)
                 }
-                LazyTabView(isSelected: selectedTab == .profile) {
-                    ProfileTabView(path: $profilePath)
+                LazyTabView(isSelected: router.selectedTab == .profile) {
+                    ProfileTabView(path: $router.profilePath)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             if shouldShowTabBar {
-                YPTabBar(selectedTab: $selectedTab)
+                YPTabBar(selectedTab: $router.selectedTab)
             }
         }
         .ignoresSafeArea(edges: .bottom)
