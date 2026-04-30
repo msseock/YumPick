@@ -212,7 +212,8 @@ struct StoreDetailView: View {
                     }
                 } label: {
                     Image(systemName: isSearchExpanded ? "xmark" : "magnifyingglass")
-                        .frame(width: 36, height: 36)
+                        .font(.system(size: 14, weight: .bold))
+                        .frame(width: 32, height: 32)
                         .background(YPColor.brandDeepSprout)
                         .clipShape(Circle())
                         .foregroundStyle(YPColor.gray0)
@@ -222,17 +223,17 @@ struct StoreDetailView: View {
                     TextField("메뉴 검색", text: $viewModel.searchQuery)
                         .font(YPFont.body2)
                         .padding(.horizontal, 12)
-                        .frame(height: 36)
+                        .frame(height: 32)
                         .background(YPColor.backgroundSecondary)
-                        .clipShape(RoundedRectangle(cornerRadius: 18))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
                         .transition(.opacity.combined(with: .move(edge: .trailing)))
                 } else {
                     categoryTokens(proxy: proxy)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(YPColor.backgroundPrimary)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .background(Color.white)
 
             YPDivider()
         }
@@ -248,6 +249,7 @@ struct StoreDetailView: View {
                     categoryToken(title: section.category, proxy: proxy)
                 }
             }
+            .padding(2)
         }
     }
 
@@ -262,8 +264,8 @@ struct StoreDetailView: View {
                 .font(YPFont.body3)
                 .foregroundStyle(isSelected ? YPColor.brandBlackSprout : YPColor.gray60)
                 .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(YPColor.gray0)
+                .frame(height: 32)
+                .background(Color.white)
                 .clipShape(Capsule())
                 .overlay {
                     Capsule()
@@ -387,7 +389,7 @@ struct StoreDetailView: View {
             } label: {
                 Image(systemName: "plus")
                     .frame(width: 28, height: 28)
-                    .background(YPColor.brandBrightSprout)
+                    .background(YPColor.brandDeepSprout)
                     .clipShape(Circle())
                     .foregroundStyle(.white)
             }
