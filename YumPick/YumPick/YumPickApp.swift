@@ -1,5 +1,6 @@
 import SwiftUI
 import FirebaseCore
+import iamport_ios
 
 @main
 struct YumPickApp: App {
@@ -14,6 +15,9 @@ struct YumPickApp: App {
                 .environment(router)
                 .task {
                     NetworkManager.configure(onSessionExpired: authSession.expire)
+                }
+                .onOpenURL { url in
+                    Iamport.shared.receivedURL(url)
                 }
         }
     }

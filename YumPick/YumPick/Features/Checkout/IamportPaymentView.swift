@@ -15,6 +15,7 @@ struct IamportPaymentView: UIViewControllerRepresentable {
 final class IamportPaymentViewController: UIViewController {
     private let payment: IamportPayment
     private let onResult: (IamportResponse?) -> Void
+    private var hasStartedPayment = false
 
     init(payment: IamportPayment, onResult: @escaping (IamportResponse?) -> Void) {
         self.payment = payment
@@ -26,6 +27,8 @@ final class IamportPaymentViewController: UIViewController {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        guard !hasStartedPayment else { return }
+        hasStartedPayment = true
         Iamport.shared.payment(
             viewController: self,
             userCode: SecretConstants.impUserCode,

@@ -12,6 +12,7 @@ struct OrderConfirmView: View {
     @State private var showSoldOutAlert = false
     @State private var showErrorAlert = false
     @State private var paymentErrorMessage: String? = nil
+    @State private var pendingSuccess: (orderCode: String, totalPrice: Int, impUid: String)? = nil
 
     init(
         selection: CheckoutSelection,
@@ -41,7 +42,14 @@ struct OrderConfirmView: View {
             if phase == .idle && !viewModel.soldOutMenuNames.isEmpty { showSoldOutAlert = true }
             if phase == .error { showErrorAlert = true }
         }
-        .fullScreenCover(isPresented: $showPayment) {
+        .fullScreenCover(isPresented: $showPayment, onDismiss: {
+            if let success = pendingSuccess {
+                pendingSuccess = nil
+                onPaymentSuccess(success.orderCode, success.totalPrice, success.impUid)
+            } else if paymentErrorMessage != nil {
+                showErrorAlert = true
+            }
+        }) {
             if let order = viewModel.createdOrder {
                 let payment = IamportPayment(
                     pg: PG.html5_inicis.makePgRawName(pgId: "INIpayTest"),
@@ -54,17 +62,12 @@ struct OrderConfirmView: View {
                     $0.app_scheme = "yumpick"
                 }
                 IamportPaymentView(payment: payment) { response in
-                    showPayment = false
                     if response?.success == true, let impUid = response?.imp_uid {
-                        onPaymentSuccess(
-                            order.order_code,
-                            order.total_price,
-                            impUid
-                        )
+                        pendingSuccess = (order.order_code, order.total_price, impUid)
                     } else {
                         paymentErrorMessage = response?.error_msg ?? "결제에 실패했습니다."
-                        showErrorAlert = true
                     }
+                    showPayment = false
                 }
             }
         }
