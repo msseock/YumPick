@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		C56B7AB82FA07BB400516EC7 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = C56B7AB72FA07BB400516EC7 /* FirebaseMessaging */; };
+		C56B7C5C2FA351CA00516EC7 /* iamport-ios in Frameworks */ = {isa = PBXBuildFile; productRef = C56B7C5B2FA351CA00516EC7 /* iamport-ios */; };
 		C5BC43D62F991D530014A0AF /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = C5BC43D52F991D530014A0AF /* Kingfisher */; };
 /* End PBXBuildFile section */
 
@@ -70,6 +71,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C56B7C5C2FA351CA00516EC7 /* iamport-ios in Frameworks */,
 				C56B7AB82FA07BB400516EC7 /* FirebaseMessaging in Frameworks */,
 				C5BC43D62F991D530014A0AF /* Kingfisher in Frameworks */,
 			);
@@ -134,6 +136,7 @@
 			packageProductDependencies = (
 				C5BC43D52F991D530014A0AF /* Kingfisher */,
 				C56B7AB72FA07BB400516EC7 /* FirebaseMessaging */,
+				C56B7C5B2FA351CA00516EC7 /* iamport-ios */,
 			);
 			productName = YumPick;
 			productReference = C5BC43A72F99051F0014A0AF /* YumPick.app */;
@@ -220,6 +223,7 @@
 			packageReferences = (
 				C5BC43D42F991D530014A0AF /* XCRemoteSwiftPackageReference "Kingfisher" */,
 				C56B7AB62FA07BB400516EC7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				C56B7C5A2FA351CA00516EC7 /* XCRemoteSwiftPackageReference "iamport-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C5BC43A82F99051F0014A0AF /* Products */;
@@ -638,6 +642,14 @@
 				minimumVersion = 12.12.1;
 			};
 		};
+		C56B7C5A2FA351CA00516EC7 /* XCRemoteSwiftPackageReference "iamport-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/iamport/iamport-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.4.7;
+			};
+		};
 		C5BC43D42F991D530014A0AF /* XCRemoteSwiftPackageReference "Kingfisher" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/onevcat/Kingfisher.git";
@@ -653,6 +665,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C56B7AB62FA07BB400516EC7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseMessaging;
+		};
+		C56B7C5B2FA351CA00516EC7 /* iamport-ios */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C56B7C5A2FA351CA00516EC7 /* XCRemoteSwiftPackageReference "iamport-ios" */;
+			productName = "iamport-ios";
 		};
 		C5BC43D52F991D530014A0AF /* Kingfisher */ = {
 			isa = XCSwiftPackageProductDependency;
