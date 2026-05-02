@@ -113,6 +113,7 @@ final class HomeViewModel {
             self.banners = try await banners
             self.popularStores = try await popularStores
             self.popularSearches = try await popularSearches
+            HomeStoreCache.popularStores = self.popularStores
             hasLoaded = true
         } catch {
             errorMessage = error.localizedDescription
@@ -121,11 +122,48 @@ final class HomeViewModel {
     }
 
     func selectPopularCategory(_ category: HomePopularCategory) async {
-        selectedPopularCategory = category
+        let shouldDeselect = selectedPopularCategory == category || category == .more
+
+        if shouldDeselect {
+            guard selectedPopularCategory != nil else { return }
+            selectedPopularCategory = nil
+            await restoreOriginalContent()
+        } else {
+            selectedPopularCategory = category
+            await applyCategory(category)
+        }
+    }
+
+    private func applyCategory(_ category: HomePopularCategory) async {
         do {
             popularStores = try await client.fetchPopularStores(category: category.title)
         } catch {
             errorMessage = error.localizedDescription
+        }
+        await refreshNearbyStores()
+    }
+
+    private func restoreOriginalContent() async {
+        if let cached = HomeStoreCache.popularStores {
+            popularStores = cached
+        } else {
+            do {
+                popularStores = try await client.fetchPopularStores(category: nil)
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+
+        if let cachedPage = HomeStoreCache.nearbyFirstPage,
+           let cachedSort = HomeNearbySort(rawValue: cachedPage.sort),
+           cachedSort == nearbySort
+        {
+            nearbyStores = cachedPage.stores
+            nearbyNextCursor = cachedPage.nextCursor
+            hasMoreNearbyStores = cachedPage.nextCursor != nil
+            loadedNearbyCursors.removeAll()
+        } else {
+            await refreshNearbyStores()
         }
     }
 
@@ -268,6 +306,14 @@ final class HomeViewModel {
             } else {
                 nearbyNextCursor = nil
                 hasMoreNearbyStores = false
+            }
+
+            if reset && selectedPopularCategory == nil {
+                HomeStoreCache.nearbyFirstPage = HomeNearbyFirstPageCache(
+                    stores: nearbyStores,
+                    nextCursor: nearbyNextCursor,
+                    sort: nearbySort.rawValue
+                )
             }
         } catch {
             errorMessage = error.localizedDescription
