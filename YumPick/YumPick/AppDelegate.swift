@@ -13,6 +13,7 @@ import UserNotifications
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate, MessagingDelegate {
   func application(_ application: UIApplication,
                    didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+    HomeStoreCache.clear()
     FirebaseApp.configure()
       if #available(iOS 10.0, *) {
           UNUserNotificationCenter.current().requestAuthorization(options: [.alert]) { granted, error in

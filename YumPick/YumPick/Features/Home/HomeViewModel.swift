@@ -242,6 +242,7 @@ final class HomeViewModel {
                 longitude: geo.longitude,
                 latitude: geo.latitude,
                 orderBy: nearbySort.rawValue,
+                category: selectedPopularCategory?.title,
                 next: requestedCursor
             )
 

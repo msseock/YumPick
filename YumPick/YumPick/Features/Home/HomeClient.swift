@@ -10,6 +10,7 @@ protocol HomeClientProtocol {
         longitude: Double,
         latitude: Double,
         orderBy: String,
+        category: String?,
         next: String?
     ) async throws -> HomeStorePage
     func toggleLike(storeId: String, likeStatus: Bool) async throws -> Bool
@@ -34,7 +35,7 @@ private enum HomeEndpoint: Endpoint {
     case banners
     case popularStores(category: String?)
     case popularSearches
-    case nearbyStores(longitude: Double, latitude: Double, orderBy: String, next: String?)
+    case nearbyStores(longitude: Double, latitude: Double, orderBy: String, category: String?, next: String?)
     case like(storeId: String, likeStatus: Bool)
 
     var path: String {
@@ -62,12 +63,15 @@ private enum HomeEndpoint: Endpoint {
             var dict: [String: String] = [:]
             if let category { dict["category"] = category }
             return dict.isEmpty ? .none : .query(dict)
-        case .nearbyStores(let longitude, let latitude, let orderBy, let next):
+        case .nearbyStores(let longitude, let latitude, let orderBy, let category, let next):
             var dict = [
                 "longitude": "\(longitude)",
                 "latitude": "\(latitude)",
                 "order_by": orderBy
             ]
+            if let category, !category.isEmpty {
+                dict["category"] = category
+            }
             if let next, !next.isEmpty {
                 dict["next"] = next
             }
@@ -122,6 +126,7 @@ final class HomeClient: HomeClientProtocol {
         longitude: Double,
         latitude: Double,
         orderBy: String,
+        category: String?,
         next: String?
     ) async throws -> HomeStorePage {
         let response: NearbyStoresResponse = try await NetworkManager.shared
@@ -129,6 +134,7 @@ final class HomeClient: HomeClientProtocol {
                 longitude: longitude,
                 latitude: latitude,
                 orderBy: orderBy,
+                category: category,
                 next: next
             ))
         return HomeStorePage(
@@ -170,6 +176,7 @@ final class MockHomeClient: HomeClientProtocol {
         longitude: Double,
         latitude: Double,
         orderBy: String,
+        category: String?,
         next: String?
     ) async throws -> HomeStorePage {
         try fetchNearbyStoresResult.get()
