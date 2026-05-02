@@ -78,6 +78,7 @@ final class AuthSession {
         keychain.delete(key: .nick)
         self.userID = nil
         self.nick = nil
+        HomeStoreCache.clear()
     }
 }
 
