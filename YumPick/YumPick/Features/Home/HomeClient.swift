@@ -6,8 +6,18 @@ protocol HomeClientProtocol {
     func fetchBanners() async throws -> [Banner]
     func fetchPopularStores(category: String?) async throws -> [StoreSummary]
     func fetchPopularSearches() async throws -> [String]
-    func fetchNearbyStores(longitude: Double, latitude: Double, orderBy: String) async throws -> [StoreSummary]
+    func fetchNearbyStores(
+        longitude: Double,
+        latitude: Double,
+        orderBy: String,
+        next: String?
+    ) async throws -> HomeStorePage
     func toggleLike(storeId: String, likeStatus: Bool) async throws -> Bool
+}
+
+struct HomeStorePage {
+    let stores: [StoreSummary]
+    let nextCursor: String?
 }
 
 // MARK: - Endpoints
@@ -24,7 +34,7 @@ private enum HomeEndpoint: Endpoint {
     case banners
     case popularStores(category: String?)
     case popularSearches
-    case nearbyStores(longitude: Double, latitude: Double, orderBy: String)
+    case nearbyStores(longitude: Double, latitude: Double, orderBy: String, next: String?)
     case like(storeId: String, likeStatus: Bool)
 
     var path: String {
@@ -52,12 +62,16 @@ private enum HomeEndpoint: Endpoint {
             var dict: [String: String] = [:]
             if let category { dict["category"] = category }
             return dict.isEmpty ? .none : .query(dict)
-        case .nearbyStores(let longitude, let latitude, let orderBy):
-            return .query([
+        case .nearbyStores(let longitude, let latitude, let orderBy, let next):
+            var dict = [
                 "longitude": "\(longitude)",
                 "latitude": "\(latitude)",
                 "order_by": orderBy
-            ])
+            ]
+            if let next, !next.isEmpty {
+                dict["next"] = next
+            }
+            return .query(dict)
         case .like(_, let likeStatus):
             return .body(LikeRequestBody(like_status: likeStatus))
         }
@@ -80,7 +94,7 @@ private struct PopularSearchesResponse: Decodable {
 
 private struct NearbyStoresResponse: Decodable {
     let data: [StoreSummary]
-    let next_cursor: String
+    let next_cursor: String?
 }
 
 // MARK: - Real Implementation
@@ -104,10 +118,23 @@ final class HomeClient: HomeClientProtocol {
         return response.data
     }
 
-    func fetchNearbyStores(longitude: Double, latitude: Double, orderBy: String) async throws -> [StoreSummary] {
+    func fetchNearbyStores(
+        longitude: Double,
+        latitude: Double,
+        orderBy: String,
+        next: String?
+    ) async throws -> HomeStorePage {
         let response: NearbyStoresResponse = try await NetworkManager.shared
-            .request(HomeEndpoint.nearbyStores(longitude: longitude, latitude: latitude, orderBy: orderBy))
-        return response.data
+            .request(HomeEndpoint.nearbyStores(
+                longitude: longitude,
+                latitude: latitude,
+                orderBy: orderBy,
+                next: next
+            ))
+        return HomeStorePage(
+            stores: response.data,
+            nextCursor: response.next_cursor?.nilIfEmpty
+        )
     }
 
     func toggleLike(storeId: String, likeStatus: Bool) async throws -> Bool {
@@ -123,7 +150,9 @@ final class MockHomeClient: HomeClientProtocol {
     var fetchBannersResult: Result<[Banner], Error> = .success([])
     var fetchPopularStoresResult: Result<[StoreSummary], Error> = .success([])
     var fetchPopularSearchesResult: Result<[String], Error> = .success([])
-    var fetchNearbyStoresResult: Result<[StoreSummary], Error> = .success([])
+    var fetchNearbyStoresResult: Result<HomeStorePage, Error> = .success(
+        HomeStorePage(stores: [], nextCursor: nil)
+    )
 
     func fetchBanners() async throws -> [Banner] {
         try fetchBannersResult.get()
@@ -137,7 +166,12 @@ final class MockHomeClient: HomeClientProtocol {
         try fetchPopularSearchesResult.get()
     }
 
-    func fetchNearbyStores(longitude: Double, latitude: Double, orderBy: String) async throws -> [StoreSummary] {
+    func fetchNearbyStores(
+        longitude: Double,
+        latitude: Double,
+        orderBy: String,
+        next: String?
+    ) async throws -> HomeStorePage {
         try fetchNearbyStoresResult.get()
     }
 
@@ -145,5 +179,12 @@ final class MockHomeClient: HomeClientProtocol {
 
     func toggleLike(storeId: String, likeStatus: Bool) async throws -> Bool {
         try toggleLikeResult.get()
+    }
+}
+
+private extension String {
+    var nilIfEmpty: String? {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }
