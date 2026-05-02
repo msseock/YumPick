@@ -33,6 +33,8 @@ struct OrderMenuItem: Codable {
 struct OrderMenu: Codable {
     let id: String
     let name: String?
+    let price: Int?
+    let menu_image_url: String?
 }
 
 struct OrderStatusTimeline: Codable {
