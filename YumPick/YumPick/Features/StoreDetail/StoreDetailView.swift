@@ -405,8 +405,8 @@ struct StoreDetailView: View {
                 .font(YPFont.title1)
                 .foregroundStyle(YPColor.textPrimary)
             Spacer()
-            Button {
-            } label: {
+            // TODO: coordinator 패턴 도입 시 path 직접 push로 전환
+            NavigationLink(value: viewModel.makeCheckoutSelection().map { HomePath.orderConfirm(selection: $0) }) {
                 HStack(spacing: 8) {
                     if viewModel.totalQuantity > 0 {
                         Text("\(viewModel.totalQuantity)")
