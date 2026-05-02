@@ -214,6 +214,13 @@ final class HomeViewModel {
         let newLikeStatus = popularIdx.map { popularStores[$0].is_pick ?? false }
             ?? nearbyIdx.map { nearbyStores[$0].is_pick ?? false }
             ?? false
+        let pickCountDelta = newLikeStatus ? 1 : -1
+
+        HomeStoreCache.applyLikeUpdate(
+            storeId: storeId,
+            isLiked: newLikeStatus,
+            pickCountDelta: pickCountDelta
+        )
 
         do {
             _ = try await client.toggleLike(storeId: storeId, likeStatus: newLikeStatus)
@@ -221,6 +228,11 @@ final class HomeViewModel {
         } catch {
             if let i = popularIdx, let original = originalPopular { popularStores[i] = original }
             if let i = nearbyIdx, let original = originalNearby { nearbyStores[i] = original }
+            HomeStoreCache.applyLikeUpdate(
+                storeId: storeId,
+                isLiked: !newLikeStatus,
+                pickCountDelta: -pickCountDelta
+            )
         }
     }
 
