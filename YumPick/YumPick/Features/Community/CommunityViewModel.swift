@@ -22,12 +22,15 @@ final class CommunityViewModel {
         defer { isLoading = false }
         let geo = await locationManager.currentLocation() ?? Geolocation(longitude: 126.9780, latitude: 37.5665)
         do {
-            posts = try await client.fetchPosts(
+            let page = try await client.fetchGeolocationPosts(
                 longitude: geo.longitude,
                 latitude: geo.latitude,
                 category: nil,
-                orderBy: "createdAt"
+                orderBy: "createdAt",
+                next: nil,
+                limit: nil
             )
+            posts = page.posts
         } catch {
             errorMessage = error.localizedDescription
         }
