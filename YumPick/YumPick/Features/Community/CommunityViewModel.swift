@@ -25,6 +25,7 @@ final class CommunityViewModel {
     private(set) var nextCursor: String? = nil
     private(set) var hasMore = true
     private var loadedCursors: Set<String> = []
+    private var likeRequestPostIds: Set<String> = []
 
     var canLoadMore: Bool { hasMore && !isPageLoading }
 
@@ -106,5 +107,56 @@ final class CommunityViewModel {
 
     func loadMore() async {
         await fetchPosts(reset: false)
+    }
+
+    func toggleLike(postId: String) async {
+        guard !likeRequestPostIds.contains(postId) else { return }
+        guard let original = posts.first(where: { $0.post_id == postId }) else { return }
+
+        likeRequestPostIds.insert(postId)
+        defer { likeRequestPostIds.remove(postId) }
+
+        let currentLiked = PostLikeStateStore.shared.isLiked(for: postId, fallback: original.is_like)
+        let newLiked = !currentLiked
+
+        PostLikeStateStore.shared.update(postId: postId, isLiked: newLiked)
+        updateVisiblePostLikeState(postId: postId, isLiked: newLiked, previousLiked: currentLiked)
+
+        do {
+            let confirmedLiked = try await client.toggleLike(postId: postId, likeStatus: newLiked)
+            PostLikeStateStore.shared.update(postId: postId, isLiked: confirmedLiked)
+            updateVisiblePostLikeState(postId: postId, isLiked: confirmedLiked)
+        } catch {
+            PostLikeStateStore.shared.update(postId: postId, isLiked: currentLiked)
+            updateVisiblePostLikeState(postId: postId, isLiked: currentLiked, previousLiked: newLiked)
+        }
+    }
+
+    private func updateVisiblePostLikeState(postId: String, isLiked: Bool, previousLiked: Bool? = nil) {
+        guard let index = posts.firstIndex(where: { $0.post_id == postId }) else { return }
+
+        let current = posts[index]
+        let currentLiked = previousLiked ?? current.is_like
+        let delta: Double
+        if currentLiked == isLiked {
+            delta = 0
+        } else {
+            delta = isLiked ? 1 : -1
+        }
+
+        posts[index] = PostSummary(
+            post_id: current.post_id,
+            category: current.category,
+            title: current.title,
+            content: current.content,
+            store: current.store,
+            geolocation: current.geolocation,
+            creator: current.creator,
+            files: current.files,
+            is_like: isLiked,
+            like_count: max(0, current.like_count + delta),
+            createdAt: current.createdAt,
+            updatedAt: current.updatedAt
+        )
     }
 }

@@ -54,7 +54,16 @@ struct CommunityView: View {
                     LazyVStack(spacing: 12) {
                         ForEach(viewModel.posts) { post in
                             NavigationLink(value: CommunityPath.detail(postId: post.post_id)) {
-                                PostCard(post: post)
+                                PostCard(
+                                    post: post,
+                                    isLiked: PostLikeStateStore.shared.isLiked(
+                                        for: post.post_id,
+                                        fallback: post.is_like
+                                    ),
+                                    onLikeTapped: {
+                                        Task { await viewModel.toggleLike(postId: post.post_id) }
+                                    }
+                                )
                             }
                             .buttonStyle(.plain)
                         }
@@ -84,7 +93,11 @@ struct CommunityView: View {
             }
         }
         .refreshable {
-            await reloadPosts()
+            paginationTask?.cancel()
+            paginationTask = nil
+            isPaginationArmed = false
+            await viewModel.fetchPosts(reset: true)
+            armPagination()
         }
     }
 
@@ -177,6 +190,8 @@ private struct CategoryChip: View {
 
 private struct PostCard: View {
     let post: PostSummary
+    let isLiked: Bool
+    let onLikeTapped: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -220,16 +235,19 @@ private struct PostCard: View {
 
                 Spacer()
 
-                HStack(spacing: 4) {
-                    Image(systemName: "heart.fill")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 12, height: 12)
-                        .foregroundStyle(YPColor.actionAccent)
-                    Text("\(Int(post.like_count))")
-                        .font(YPFont.caption1)
-                        .foregroundStyle(YPColor.textTertiary)
+                Button(action: onLikeTapped) {
+                    HStack(spacing: 4) {
+                        Image(systemName: isLiked ? "heart.fill" : "heart")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 13, height: 13)
+                            .foregroundStyle(isLiked ? YPColor.actionAccent : YPColor.textTertiary)
+                        Text("\(Int(post.like_count))")
+                            .font(YPFont.caption1)
+                            .foregroundStyle(YPColor.textTertiary)
+                    }
                 }
+                .buttonStyle(.plain)
             }
         }
         .padding(16)
