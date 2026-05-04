@@ -100,7 +100,6 @@ struct YPOrderProgressCard: View {
 
             storeImage
                 .frame(maxWidth: .infinity, maxHeight: 120)
-//                .frame(width: 120, height: 120)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
