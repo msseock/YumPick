@@ -22,7 +22,7 @@ struct CommunityTabView: View {
                 .navigationDestination(for: CommunityPath.self) { destination in
                     switch destination {
                     case .detail(let postId):
-                        Text("게시글 상세: \(postId)")   // 3단계에서 교체
+                        CommunityPostDetailView(postId: postId)
                     case .compose(let mode):
                         Text("게시글 작성/수정")          // 4단계에서 교체
                     case .search:
