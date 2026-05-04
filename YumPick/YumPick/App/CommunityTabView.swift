@@ -23,8 +23,13 @@ struct CommunityTabView: View {
                     switch destination {
                     case .detail(let postId):
                         CommunityPostDetailView(postId: postId)
-                    case .compose:
-                        Text("게시글 작성/수정")          // 4단계에서 교체
+                    case .compose(let mode):
+                        switch mode {
+                        case .create:
+                            CommunityComposeView(mode: .create)
+                        case .edit(let post):
+                            CommunityComposeView(mode: .edit(post), existingPost: post)
+                        }
                     case .search:
                         Text("검색")                      // 7단계에서 교체
                     case .userPosts(let userId):
