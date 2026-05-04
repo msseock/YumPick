@@ -20,6 +20,9 @@ protocol CommunityClientProtocol {
     func toggleLike(postId: String, likeStatus: Bool) async throws -> Bool
     func fetchUserPosts(userId: String, category: String?, next: String?, limit: Int?) async throws -> PostPage
     func fetchLikedPosts(category: String?, next: String?, limit: Int?) async throws -> PostPage
+    func createComment(postId: String, parentCommentId: String?, content: String) async throws -> PostComment
+    func updateComment(postId: String, commentId: String, content: String) async throws -> PostComment
+    func deleteComment(postId: String, commentId: String) async throws
 }
 
 // MARK: - Request DTOs
@@ -57,6 +60,9 @@ private enum CommunityEndpoint: Endpoint {
     case toggleLike(postId: String, likeStatus: Bool)
     case userPosts(userId: String, category: String?, next: String?, limit: Int?)
     case likedPosts(category: String?, next: String?, limit: Int?)
+    case createComment(postId: String, parentCommentId: String?, content: String)
+    case updateComment(postId: String, commentId: String, content: String)
+    case deleteComment(postId: String, commentId: String)
 
     var path: String {
         switch self {
@@ -70,16 +76,19 @@ private enum CommunityEndpoint: Endpoint {
         case .toggleLike(let id, _):             return "/v1/posts/\(id)/like"
         case .userPosts(let userId, _, _, _):    return "/v1/posts/users/\(userId)"
         case .likedPosts:                        return "/v1/posts/likes/me"
+        case .createComment(let postId, _, _):   return "/v1/posts/\(postId)/comments"
+        case .updateComment(let postId, let commentId, _): return "/v1/posts/\(postId)/comments/\(commentId)"
+        case .deleteComment(let postId, let commentId):    return "/v1/posts/\(postId)/comments/\(commentId)"
         }
     }
 
     var method: HTTPMethod {
         switch self {
-        case .uploadFiles, .createPost, .toggleLike:
+        case .uploadFiles, .createPost, .toggleLike, .createComment:
             return .post
-        case .updatePost:
+        case .updatePost, .updateComment:
             return .put
-        case .deletePost:
+        case .deletePost, .deleteComment:
             return .delete
         default:
             return .get
@@ -104,7 +113,7 @@ private enum CommunityEndpoint: Endpoint {
             return .query(dict)
         case .searchPosts(let title):
             return .query(["title": title])
-        case .postDetail, .deletePost:
+        case .postDetail, .deletePost, .deleteComment:
             return .none
         case .updatePost(_, let body):
             return .body(body)
@@ -122,6 +131,10 @@ private enum CommunityEndpoint: Endpoint {
             if let next, !next.isEmpty { dict["next"] = next }
             if let limit { dict["limit"] = "\(limit)" }
             return .query(dict)
+        case .createComment(_, let parentId, let content):
+            return .body(CreateCommentRequest(parent_comment_id: parentId, content: content))
+        case .updateComment(_, _, let content):
+            return .body(UpdateCommentRequest(content: content))
         }
     }
 }
@@ -147,6 +160,15 @@ private struct LikeRequest: Encodable {
 
 private struct LikeResponse: Decodable {
     let like_status: Bool
+}
+
+private struct CreateCommentRequest: Encodable {
+    let parent_comment_id: String?
+    let content: String
+}
+
+private struct UpdateCommentRequest: Encodable {
+    let content: String
 }
 
 // MARK: - Real Implementation
@@ -213,6 +235,24 @@ final class CommunityClient: CommunityClientProtocol {
         let nextCursor = response.next_cursor == "0" ? nil : response.next_cursor
         return PostPage(posts: response.data, nextCursor: nextCursor)
     }
+
+    func createComment(postId: String, parentCommentId: String?, content: String) async throws -> PostComment {
+        try await NetworkManager.shared.request(
+            CommunityEndpoint.createComment(postId: postId, parentCommentId: parentCommentId, content: content)
+        )
+    }
+
+    func updateComment(postId: String, commentId: String, content: String) async throws -> PostComment {
+        try await NetworkManager.shared.request(
+            CommunityEndpoint.updateComment(postId: postId, commentId: commentId, content: content)
+        )
+    }
+
+    func deleteComment(postId: String, commentId: String) async throws {
+        try await NetworkManager.shared.requestWithoutResponse(
+            CommunityEndpoint.deleteComment(postId: postId, commentId: commentId)
+        )
+    }
 }
 
 // MARK: - Mock
@@ -228,6 +268,9 @@ final class MockCommunityClient: CommunityClientProtocol {
     var toggleLikeResult: Result<Bool, Error> = .success(true)
     var fetchUserPostsResult: Result<PostPage, Error> = .success(PostPage(posts: [], nextCursor: nil))
     var fetchLikedPostsResult: Result<PostPage, Error> = .success(PostPage(posts: [], nextCursor: nil))
+    var createCommentResult: Result<PostComment, Error> = .failure(MockError.notImplemented)
+    var updateCommentResult: Result<PostComment, Error> = .failure(MockError.notImplemented)
+    var deleteCommentResult: Result<Void, Error> = .success(())
 
     enum MockError: Error { case notImplemented }
 
@@ -241,4 +284,7 @@ final class MockCommunityClient: CommunityClientProtocol {
     func toggleLike(postId: String, likeStatus: Bool) async throws -> Bool { try toggleLikeResult.get() }
     func fetchUserPosts(userId: String, category: String?, next: String?, limit: Int?) async throws -> PostPage { try fetchUserPostsResult.get() }
     func fetchLikedPosts(category: String?, next: String?, limit: Int?) async throws -> PostPage { try fetchLikedPostsResult.get() }
+    func createComment(postId: String, parentCommentId: String?, content: String) async throws -> PostComment { try createCommentResult.get() }
+    func updateComment(postId: String, commentId: String, content: String) async throws -> PostComment { try updateCommentResult.get() }
+    func deleteComment(postId: String, commentId: String) async throws { try deleteCommentResult.get() }
 }
