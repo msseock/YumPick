@@ -13,8 +13,13 @@ protocol CommunityClientProtocol {
     func uploadFiles(parts: [MultipartData]) async throws -> [String]
     func createPost(_ request: CreatePostRequest) async throws -> PostDetail
     func fetchGeolocationPosts(longitude: Double, latitude: Double, category: String?, orderBy: String, next: String?, limit: Int?) async throws -> PostPage
+    func searchPosts(title: String) async throws -> [PostSummary]
+    func fetchPostDetail(postId: String) async throws -> PostDetail
     func updatePost(postId: String, _ request: UpdatePostRequest) async throws -> PostDetail
     func deletePost(postId: String) async throws
+    func toggleLike(postId: String, likeStatus: Bool) async throws -> Bool
+    func fetchUserPosts(userId: String, category: String?, next: String?, limit: Int?) async throws -> PostPage
+    func fetchLikedPosts(category: String?, next: String?, limit: Int?) async throws -> PostPage
 }
 
 // MARK: - Request DTOs
@@ -45,28 +50,38 @@ private enum CommunityEndpoint: Endpoint {
     case uploadFiles(parts: [MultipartData])
     case createPost(CreatePostRequest)
     case geolocationPosts(longitude: Double, latitude: Double, category: String?, orderBy: String, next: String?, limit: Int?)
+    case searchPosts(title: String)
+    case postDetail(postId: String)
     case updatePost(postId: String, UpdatePostRequest)
     case deletePost(postId: String)
+    case toggleLike(postId: String, likeStatus: Bool)
+    case userPosts(userId: String, category: String?, next: String?, limit: Int?)
+    case likedPosts(category: String?, next: String?, limit: Int?)
 
     var path: String {
         switch self {
         case .uploadFiles:                       return "/v1/posts/files"
         case .createPost:                        return "/v1/posts"
         case .geolocationPosts:                  return "/v1/posts/geolocation"
+        case .searchPosts:                       return "/v1/posts/search"
+        case .postDetail(let id):                return "/v1/posts/\(id)"
         case .updatePost(let id, _):             return "/v1/posts/\(id)"
         case .deletePost(let id):                return "/v1/posts/\(id)"
+        case .toggleLike(let id, _):             return "/v1/posts/\(id)/like"
+        case .userPosts(let userId, _, _, _):    return "/v1/posts/users/\(userId)"
+        case .likedPosts:                        return "/v1/posts/likes/me"
         }
     }
 
     var method: HTTPMethod {
         switch self {
-        case .uploadFiles, .createPost:
+        case .uploadFiles, .createPost, .toggleLike:
             return .post
         case .updatePost:
             return .put
         case .deletePost:
             return .delete
-        case .geolocationPosts:
+        default:
             return .get
         }
     }
@@ -87,10 +102,26 @@ private enum CommunityEndpoint: Endpoint {
             if let next, !next.isEmpty { dict["next"] = next }
             if let limit { dict["limit"] = "\(limit)" }
             return .query(dict)
+        case .searchPosts(let title):
+            return .query(["title": title])
+        case .postDetail, .deletePost:
+            return .none
         case .updatePost(_, let body):
             return .body(body)
-        case .deletePost:
-            return .none
+        case .toggleLike(_, let status):
+            return .body(LikeRequest(like_status: status))
+        case .userPosts(_, let category, let next, let limit):
+            var dict: [String: String] = [:]
+            if let category { dict["category"] = category }
+            if let next, !next.isEmpty { dict["next"] = next }
+            if let limit { dict["limit"] = "\(limit)" }
+            return .query(dict)
+        case .likedPosts(let category, let next, let limit):
+            var dict: [String: String] = [:]
+            if let category { dict["category"] = category }
+            if let next, !next.isEmpty { dict["next"] = next }
+            if let limit { dict["limit"] = "\(limit)" }
+            return .query(dict)
         }
     }
 }
@@ -102,8 +133,20 @@ private struct PostsPageResponse: Decodable {
     let next_cursor: String
 }
 
+private struct PostSearchResponse: Decodable {
+    let data: [PostSummary]
+}
+
 private struct FileUploadResponse: Decodable {
     let files: [String]
+}
+
+private struct LikeRequest: Encodable {
+    let like_status: Bool
+}
+
+private struct LikeResponse: Decodable {
+    let like_status: Bool
 }
 
 // MARK: - Real Implementation
@@ -129,12 +172,46 @@ final class CommunityClient: CommunityClientProtocol {
         return PostPage(posts: response.data, nextCursor: nextCursor)
     }
 
+    func searchPosts(title: String) async throws -> [PostSummary] {
+        let response: PostSearchResponse = try await NetworkManager.shared.request(
+            CommunityEndpoint.searchPosts(title: title)
+        )
+        return response.data
+    }
+
+    func fetchPostDetail(postId: String) async throws -> PostDetail {
+        try await NetworkManager.shared.request(CommunityEndpoint.postDetail(postId: postId))
+    }
+
     func updatePost(postId: String, _ request: UpdatePostRequest) async throws -> PostDetail {
         try await NetworkManager.shared.request(CommunityEndpoint.updatePost(postId: postId, request))
     }
 
     func deletePost(postId: String) async throws {
         try await NetworkManager.shared.requestWithoutResponse(CommunityEndpoint.deletePost(postId: postId))
+    }
+
+    func toggleLike(postId: String, likeStatus: Bool) async throws -> Bool {
+        let response: LikeResponse = try await NetworkManager.shared.request(
+            CommunityEndpoint.toggleLike(postId: postId, likeStatus: likeStatus)
+        )
+        return response.like_status
+    }
+
+    func fetchUserPosts(userId: String, category: String?, next: String?, limit: Int?) async throws -> PostPage {
+        let response: PostsPageResponse = try await NetworkManager.shared.request(
+            CommunityEndpoint.userPosts(userId: userId, category: category, next: next, limit: limit)
+        )
+        let nextCursor = response.next_cursor == "0" ? nil : response.next_cursor
+        return PostPage(posts: response.data, nextCursor: nextCursor)
+    }
+
+    func fetchLikedPosts(category: String?, next: String?, limit: Int?) async throws -> PostPage {
+        let response: PostsPageResponse = try await NetworkManager.shared.request(
+            CommunityEndpoint.likedPosts(category: category, next: next, limit: limit)
+        )
+        let nextCursor = response.next_cursor == "0" ? nil : response.next_cursor
+        return PostPage(posts: response.data, nextCursor: nextCursor)
     }
 }
 
@@ -144,14 +221,24 @@ final class MockCommunityClient: CommunityClientProtocol {
     var uploadFilesResult: Result<[String], Error> = .success([])
     var createPostResult: Result<PostDetail, Error> = .failure(MockError.notImplemented)
     var fetchGeolocationPostsResult: Result<PostPage, Error> = .success(PostPage(posts: [], nextCursor: nil))
+    var searchPostsResult: Result<[PostSummary], Error> = .success([])
+    var fetchPostDetailResult: Result<PostDetail, Error> = .failure(MockError.notImplemented)
     var updatePostResult: Result<PostDetail, Error> = .failure(MockError.notImplemented)
     var deletePostResult: Result<Void, Error> = .success(())
+    var toggleLikeResult: Result<Bool, Error> = .success(true)
+    var fetchUserPostsResult: Result<PostPage, Error> = .success(PostPage(posts: [], nextCursor: nil))
+    var fetchLikedPostsResult: Result<PostPage, Error> = .success(PostPage(posts: [], nextCursor: nil))
 
     enum MockError: Error { case notImplemented }
 
     func uploadFiles(parts: [MultipartData]) async throws -> [String] { try uploadFilesResult.get() }
     func createPost(_ request: CreatePostRequest) async throws -> PostDetail { try createPostResult.get() }
     func fetchGeolocationPosts(longitude: Double, latitude: Double, category: String?, orderBy: String, next: String?, limit: Int?) async throws -> PostPage { try fetchGeolocationPostsResult.get() }
+    func searchPosts(title: String) async throws -> [PostSummary] { try searchPostsResult.get() }
+    func fetchPostDetail(postId: String) async throws -> PostDetail { try fetchPostDetailResult.get() }
     func updatePost(postId: String, _ request: UpdatePostRequest) async throws -> PostDetail { try updatePostResult.get() }
     func deletePost(postId: String) async throws { try deletePostResult.get() }
+    func toggleLike(postId: String, likeStatus: Bool) async throws -> Bool { try toggleLikeResult.get() }
+    func fetchUserPosts(userId: String, category: String?, next: String?, limit: Int?) async throws -> PostPage { try fetchUserPostsResult.get() }
+    func fetchLikedPosts(category: String?, next: String?, limit: Int?) async throws -> PostPage { try fetchLikedPostsResult.get() }
 }
