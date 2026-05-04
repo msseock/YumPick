@@ -30,7 +30,8 @@ final class LoginViewModel {
         errorMessage = nil
         defer { isLoading = false }
         do {
-            return try await client.login(email: email, password: password)
+            let fcmToken = KeychainManager.shared.read(key: .fcmToken)
+            return try await client.login(email: email, password: password, deviceToken: fcmToken)
         } catch {
             errorMessage = error.localizedDescription
             return nil
@@ -48,7 +49,8 @@ final class LoginViewModel {
                 errorMessage = "Apple 로그인 처리에 실패했습니다."
                 return nil
             }
-            return await appleLoginTapped(idToken: idToken, deviceToken: nil)
+            let fcmToken = KeychainManager.shared.read(key: .fcmToken)
+            return await appleLoginTapped(idToken: idToken, deviceToken: fcmToken)
         case .failure(let error):
             errorMessage = error.localizedDescription
             return nil

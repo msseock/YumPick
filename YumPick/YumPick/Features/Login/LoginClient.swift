@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Protocol
 
 protocol LoginClientProtocol {
-    func login(email: String, password: String) async throws -> AuthTokenBundle
+    func login(email: String, password: String, deviceToken: String?) async throws -> AuthTokenBundle
     func appleLogin(idToken: String, deviceToken: String?) async throws -> AuthTokenBundle
     func logout() async throws
 }
@@ -46,6 +46,7 @@ private enum LoginEndpoint: Endpoint {
 private struct LoginRequest: Encodable {
     let email: String
     let password: String
+    let deviceToken: String?
 }
 
 private struct AppleLoginRequest: Encodable {
@@ -63,9 +64,9 @@ private struct LoginResponse: Decodable {
 // MARK: - Real Implementation
 
 final class LoginClient: LoginClientProtocol {
-    func login(email: String, password: String) async throws -> AuthTokenBundle {
+    func login(email: String, password: String, deviceToken: String?) async throws -> AuthTokenBundle {
         let response: LoginResponse = try await NetworkManager.shared.request(
-            LoginEndpoint.login(LoginRequest(email: email, password: password))
+            LoginEndpoint.login(LoginRequest(email: email, password: password, deviceToken: deviceToken))
         )
         return AuthTokenBundle(
             accessToken: response.accessToken,
@@ -103,7 +104,7 @@ final class MockLoginClient: LoginClientProtocol {
     )
     var logoutResult: Result<Void, Error> = .success(())
 
-    func login(email: String, password: String) async throws -> AuthTokenBundle {
+    func login(email: String, password: String, deviceToken: String?) async throws -> AuthTokenBundle {
         try loginResult.get()
     }
 

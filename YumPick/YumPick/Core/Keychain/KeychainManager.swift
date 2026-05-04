@@ -10,6 +10,7 @@ final class KeychainManager {
         case refreshToken = "com.yumpick.refreshToken"
         case userID       = "com.yumpick.userID"
         case nick         = "com.yumpick.nick"
+        case fcmToken     = "com.yumpick.fcmToken"
     }
 
     func save(key: Key, value: String) {
@@ -83,5 +84,6 @@ final class KeychainManager {
         delete(key: .refreshToken)
         delete(key: .userID)
         delete(key: .nick)
+        delete(key: .fcmToken)
     }
 }
