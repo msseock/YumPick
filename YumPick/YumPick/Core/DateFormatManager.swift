@@ -48,4 +48,17 @@ final class DateFormatManager {
         guard let date = date(from: isoString) else { return nil }
         return statusTimeFormatter.string(from: date)
     }
+
+    // ISO 8601 → "방금 전", "3분 전", "2시간 전", "5일 전", "2025년 4월 26일"
+    func relativeDate(from isoString: String) -> String {
+        guard let date = date(from: isoString) else { return "" }
+        let seconds = max(0, Int(Date().timeIntervalSince(date)))
+        switch seconds {
+        case ..<60:      return "방금 전"
+        case ..<3600:    return "\(seconds / 60)분 전"
+        case ..<86400:   return "\(seconds / 3600)시간 전"
+        case ..<2592000: return "\(seconds / 86400)일 전"
+        default:         return orderDateFormatter.string(from: date)
+        }
+    }
 }
