@@ -1,10 +1,10 @@
 import Foundation
 
-class DateFormatManager {
+final class DateFormatManager {
     static let shared = DateFormatManager()
-    
+
     private init() { }
-    
+
     private let isoParser: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -25,11 +25,27 @@ class DateFormatManager {
         return f
     }()
 
+    private let statusTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ko_KR")
+        f.dateFormat = "a h:mm"
+        return f
+    }()
+
+    private func date(from isoString: String) -> Date? {
+        isoParser.date(from: isoString)
+            ?? isoParserNoFraction.date(from: isoString)
+    }
+
     // ISO 8601 → "2025년 4월 26일 오후 3:00"
     func orderDate(from isoString: String) -> String {
-        let date = isoParser.date(from: isoString)
-            ?? isoParserNoFraction.date(from: isoString)
-        guard let date else { return "" }
+        guard let date = date(from: isoString) else { return "" }
         return orderDateFormatter.string(from: date)
+    }
+
+    // ISO 8601 → "오후 6:24"
+    func pickupStatusTime(from isoString: String) -> String? {
+        guard let date = date(from: isoString) else { return nil }
+        return statusTimeFormatter.string(from: date)
     }
 }
