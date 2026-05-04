@@ -4,6 +4,8 @@ import Security
 final class KeychainManager {
     static let shared = KeychainManager()
     private init() {}
+    private var cachedValues: [Key: String] = [:]
+    private var cachedEmptyKeys: Set<Key> = []
 
     enum Key: String {
         case accessToken  = "com.yumpick.accessToken"
@@ -27,6 +29,8 @@ final class KeychainManager {
             kSecValueData as String:   data
         ]
         let status = SecItemAdd(addQuery as CFDictionary, nil)
+        cachedValues[key] = value
+        cachedEmptyKeys.remove(key)
         
         #if DEBUG
         if status == errSecSuccess {
@@ -38,6 +42,13 @@ final class KeychainManager {
     }
 
     func read(key: Key) -> String? {
+        if let cachedValue = cachedValues[key] {
+            return cachedValue
+        }
+        if cachedEmptyKeys.contains(key) {
+            return nil
+        }
+
         let query: [String: Any] = [
             kSecClass as String:       kSecClassGenericPassword,
             kSecAttrAccount as String: key.rawValue,
@@ -51,13 +62,21 @@ final class KeychainManager {
             #if DEBUG
             print("🔑 [KEYCHAIN] Read Failed or Empty: \(key.rawValue)")
             #endif
+            cachedEmptyKeys.insert(key)
             return nil
         }
         
         #if DEBUG
         print("🔑 [KEYCHAIN] Read Success: \(key.rawValue)")
         #endif
-        return String(data: data, encoding: .utf8)
+        let value = String(data: data, encoding: .utf8)
+        if let value {
+            cachedValues[key] = value
+            cachedEmptyKeys.remove(key)
+        } else {
+            cachedEmptyKeys.insert(key)
+        }
+        return value
     }
 
     func delete(key: Key) {
@@ -66,6 +85,8 @@ final class KeychainManager {
             kSecAttrAccount as String: key.rawValue
         ]
         let status = SecItemDelete(query as CFDictionary)
+        cachedValues.removeValue(forKey: key)
+        cachedEmptyKeys.insert(key)
         
         #if DEBUG
         if status == errSecSuccess {
