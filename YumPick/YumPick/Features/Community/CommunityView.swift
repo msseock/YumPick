@@ -32,6 +32,7 @@ struct CommunityView: View {
             }
         }
         .task {
+            guard viewModel.posts.isEmpty else { return }
             await viewModel.fetchPosts(reset: true)
             armPagination()
         }
