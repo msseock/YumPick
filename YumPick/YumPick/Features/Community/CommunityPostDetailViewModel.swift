@@ -3,7 +3,7 @@ import Foundation
 @Observable
 final class CommunityPostDetailViewModel {
     var post: PostDetail? = nil
-    var isLoading = false
+    var isLoading = true
     var errorMessage: String? = nil
     var showDeleteConfirm = false
     private var isLikeRequestInFlight = false
