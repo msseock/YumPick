@@ -1,6 +1,8 @@
 import Foundation
 
-struct PostDetail: Codable, Identifiable {
+struct PostDetail: Codable, Identifiable, Hashable {
+    static func == (lhs: PostDetail, rhs: PostDetail) -> Bool { lhs.post_id == rhs.post_id }
+    func hash(into hasher: inout Hasher) { hasher.combine(post_id) }
     let post_id: String
     let category: String
     let title: String

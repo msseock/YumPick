@@ -2,7 +2,7 @@ import SwiftUI
 
 enum ComposeMode: Hashable {
     case create
-    case edit(postId: String)
+    case edit(PostDetail)
 }
 
 enum CommunityPath: Hashable {
@@ -23,7 +23,7 @@ struct CommunityTabView: View {
                     switch destination {
                     case .detail(let postId):
                         CommunityPostDetailView(postId: postId)
-                    case .compose(let mode):
+                    case .compose:
                         Text("게시글 작성/수정")          // 4단계에서 교체
                     case .search:
                         Text("검색")                      // 7단계에서 교체

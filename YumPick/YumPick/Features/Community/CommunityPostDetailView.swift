@@ -190,8 +190,10 @@ struct CommunityPostDetailView: View {
 
     private var ownerMenu: some View {
         Menu {
-            NavigationLink(value: CommunityPath.compose(.edit(postId: postId))) {
-                Label("수정", systemImage: "pencil")
+            if let post = viewModel.post {
+                NavigationLink(value: CommunityPath.compose(.edit(post))) {
+                    Label("수정", systemImage: "pencil")
+                }
             }
             Button(role: .destructive) {
                 viewModel.showDeleteConfirm = true
