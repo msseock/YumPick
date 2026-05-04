@@ -132,7 +132,7 @@ private enum CommunityEndpoint: Endpoint {
             if let limit { dict["limit"] = "\(limit)" }
             return .query(dict)
         case .createComment(_, let parentId, let content):
-            return .body(CreateCommentRequest(parent_comment_id: parentId, content: content))
+            return .body(CreateCommentRequest(content: content, parentCommentId: parentId))
         case .updateComment(_, _, let content):
             return .body(UpdateCommentRequest(content: content))
         }
@@ -162,9 +162,27 @@ private struct LikeResponse: Decodable {
     let like_status: Bool
 }
 
-private struct CreateCommentRequest: Encodable {
-    let parent_comment_id: String?
+struct CreateCommentRequest: Encodable {
     let content: String
+    let parentCommentId: String?
+
+    enum CodingKeys: String, CodingKey {
+        case content
+        case parentCommentId = "parent_comment_id"
+    }
+
+    init(content: String, parentCommentId: String? = nil) {
+        self.content = content
+        self.parentCommentId = parentCommentId
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(content, forKey: .content)
+        if let parentCommentId, !parentCommentId.isEmpty {
+            try container.encode(parentCommentId, forKey: .parentCommentId)
+        }
+    }
 }
 
 private struct UpdateCommentRequest: Encodable {
@@ -271,6 +289,7 @@ final class MockCommunityClient: CommunityClientProtocol {
     var createCommentResult: Result<PostComment, Error> = .failure(MockError.notImplemented)
     var updateCommentResult: Result<PostComment, Error> = .failure(MockError.notImplemented)
     var deleteCommentResult: Result<Void, Error> = .success(())
+    private(set) var createCommentRequests: [(postId: String, parentCommentId: String?, content: String)] = []
 
     enum MockError: Error { case notImplemented }
 
@@ -284,7 +303,10 @@ final class MockCommunityClient: CommunityClientProtocol {
     func toggleLike(postId: String, likeStatus: Bool) async throws -> Bool { try toggleLikeResult.get() }
     func fetchUserPosts(userId: String, category: String?, next: String?, limit: Int?) async throws -> PostPage { try fetchUserPostsResult.get() }
     func fetchLikedPosts(category: String?, next: String?, limit: Int?) async throws -> PostPage { try fetchLikedPostsResult.get() }
-    func createComment(postId: String, parentCommentId: String?, content: String) async throws -> PostComment { try createCommentResult.get() }
+    func createComment(postId: String, parentCommentId: String?, content: String) async throws -> PostComment {
+        createCommentRequests.append((postId: postId, parentCommentId: parentCommentId, content: content))
+        return try createCommentResult.get()
+    }
     func updateComment(postId: String, commentId: String, content: String) async throws -> PostComment { try updateCommentResult.get() }
     func deleteComment(postId: String, commentId: String) async throws { try deleteCommentResult.get() }
 }
