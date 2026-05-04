@@ -18,7 +18,10 @@ struct OrderView: View {
                             .padding(.horizontal, 20)
                             .padding(.vertical, 4)
 
-                        CurrentOrderSection(order: viewModel.orders[0])
+                        CurrentOrderSection(order: viewModel.orders[0]) {
+                            Task { await viewModel.advanceStatus(of: viewModel.orders[0]) }
+                        }
+                        .allowsHitTesting(!viewModel.isUpdatingStatus)
 
                         if viewModel.orders.count > 1 {
                             PastOrderSection(orders: Array(viewModel.orders.dropFirst()))
@@ -62,6 +65,7 @@ private struct PickupNoticeBanner: View {
 
 private struct CurrentOrderSection: View {
     let order: Order
+    var onStatusAdvance: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -78,6 +82,7 @@ private struct CurrentOrderSection: View {
                 timeline: order.order_status_timeline
             )
             .padding(.horizontal, 20)
+            .onTapGesture { onStatusAdvance?() }
 
             OrderMenuListCard(order: order)
                 .padding(.horizontal, 20)
