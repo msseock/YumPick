@@ -159,6 +159,7 @@ final class ChatViewModel {
         guard cancellables.isEmpty else { return }
 
         socketManager.messagePublisher
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] message in
                 guard let self else { return }
                 self.messages = self.mergeMessages(self.messages + [message])

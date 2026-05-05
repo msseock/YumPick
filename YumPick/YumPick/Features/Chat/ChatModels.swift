@@ -19,9 +19,42 @@ struct ChatMessage: Identifiable, Equatable, Decodable {
         case roomID = "room_id"
         case content
         case createdAt
+        case created_at
         case updatedAt
+        case updated_at
         case sender
         case files
+    }
+
+    init(
+        chatID: String,
+        roomID: String,
+        content: String,
+        createdAt: String,
+        updatedAt: String,
+        sender: ChatSender,
+        files: [String]
+    ) {
+        self.chatID = chatID
+        self.roomID = roomID
+        self.content = content
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.sender = sender
+        self.files = files
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        chatID = try container.decode(String.self, forKey: .chatID)
+        roomID = try container.decode(String.self, forKey: .roomID)
+        content = try container.decode(String.self, forKey: .content)
+        createdAt = try container.decodeIfPresent(String.self, forKey: .createdAt)
+            ?? container.decode(String.self, forKey: .created_at)
+        updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt)
+            ?? container.decode(String.self, forKey: .updated_at)
+        sender = try container.decode(ChatSender.self, forKey: .sender)
+        files = try container.decodeIfPresent([String].self, forKey: .files) ?? []
     }
 }
 
@@ -34,6 +67,21 @@ struct ChatSender: Equatable, Decodable {
         case userID = "user_id"
         case nick
         case profileImage
+        case profile_image
+    }
+
+    init(userID: String, nick: String, profileImage: String?) {
+        self.userID = userID
+        self.nick = nick
+        self.profileImage = profileImage
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        userID = try container.decode(String.self, forKey: .userID)
+        nick = try container.decode(String.self, forKey: .nick)
+        profileImage = try container.decodeIfPresent(String.self, forKey: .profileImage)
+            ?? container.decodeIfPresent(String.self, forKey: .profile_image)
     }
 }
 
@@ -49,9 +97,24 @@ struct ChatRoom: Identifiable, Equatable, Decodable {
     enum CodingKeys: String, CodingKey {
         case roomID = "room_id"
         case createdAt
+        case created_at
         case updatedAt
+        case updated_at
         case participants
         case lastChat
+        case last_chat
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        roomID = try container.decode(String.self, forKey: .roomID)
+        createdAt = try container.decodeIfPresent(String.self, forKey: .createdAt)
+            ?? container.decode(String.self, forKey: .created_at)
+        updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt)
+            ?? container.decode(String.self, forKey: .updated_at)
+        participants = try container.decode([ChatSender].self, forKey: .participants)
+        lastChat = try container.decodeIfPresent(ChatMessage.self, forKey: .lastChat)
+            ?? container.decodeIfPresent(ChatMessage.self, forKey: .last_chat)
     }
 
     func opponent(currentUserID: String?) -> ChatSender? {

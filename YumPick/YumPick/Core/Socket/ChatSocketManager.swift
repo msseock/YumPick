@@ -96,8 +96,8 @@ final class ChatSocketManager: ChatSocketManagerProtocol {
                 "transport": "websocket",
                 "engineIOVersion": "4",
                 "socketIOVersion": "3",
-                "hasAuthorization": extraHeaders["Authorization"] != nil,
-                "hasSeSACKey": extraHeaders["SeSACKey"] != nil,
+                "hasAuthorization": extraHeaders["authorization"] != nil,
+                "hasSeSACKey": extraHeaders["sesackey"] != nil,
                 "generation": generation,
                 "reconnectAttempt": reconnectAttempt
             ]
@@ -106,15 +106,15 @@ final class ChatSocketManager: ChatSocketManagerProtocol {
         manager = SocketManager(
             socketURL: url,
             config: [
-                .path("/chats-\(roomID)"),
                 .extraHeaders(extraHeaders),
                 .log(shouldLogSocketIO),
                 .compress,
+                .forceWebsockets(true),
                 .reconnects(false),
-                .forceWebsockets(true)
+                .version(.three)
             ]
         )
-        socket = manager?.defaultSocket
+        socket = manager?.socket(forNamespace: "/chats-\(roomID)")
         attachHandlers(roomID: roomID, generation: generation)
         socket?.connect()
     }
@@ -135,8 +135,7 @@ final class ChatSocketManager: ChatSocketManagerProtocol {
             guard let self, self.connectionGeneration == generation, let payload = dataArray.first else { return }
             self.logSocketEvent("INCOMING CHAT", data: payload)
             do {
-                let data = try JSONSerialization.data(withJSONObject: payload)
-                let message = try JSONDecoder().decode(ChatMessage.self, from: data)
+                let message = try self.decodeChatMessage(from: payload)
                 self.logSocketEvent(
                     "DECODED CHAT",
                     data: [
@@ -197,7 +196,86 @@ final class ChatSocketManager: ChatSocketManagerProtocol {
         }
 
         errorSubject.send(NetworkError.unknown)
-        scheduleReconnectIfNeeded(generation: generation)
+    }
+
+    private func decodeChatMessage(from payload: Any) throws -> ChatMessage {
+        if let message = try? decodeDirectChatMessage(from: payload) {
+            return message
+        }
+
+        if let dictionary = payload as? [String: Any], let wrapped = dictionary["data"] {
+            if let message = try? decodeDirectChatMessage(from: wrapped) {
+                return message
+            }
+            if let messages = try? decodeChatMessageArray(from: wrapped), let first = messages.first {
+                return first
+            }
+        }
+
+        if let array = payload as? [Any],
+           let first = array.first,
+           let message = try? decodeDirectChatMessage(from: first) {
+            return message
+        }
+
+        throw DecodingError.dataCorrupted(
+            .init(codingPath: [], debugDescription: "Socket chat payload does not contain a ChatMessage")
+        )
+    }
+
+    private func decodeDirectChatMessage(from payload: Any) throws -> ChatMessage? {
+        if let data = payload as? Data {
+            return try JSONDecoder().decode(ChatMessage.self, from: data)
+        }
+
+        if let string = payload as? String {
+            guard let data = string.data(using: .utf8) else { return nil }
+            return try JSONDecoder().decode(ChatMessage.self, from: data)
+        }
+
+        guard JSONSerialization.isValidJSONObject(payload) else { return nil }
+        let data = try JSONSerialization.data(withJSONObject: payload)
+        return try JSONDecoder().decode(ChatMessage.self, from: data)
+    }
+
+    private func decodeChatMessageArray(from payload: Any) throws -> [ChatMessage]? {
+        if let data = payload as? Data {
+            return try JSONDecoder().decode([ChatMessage].self, from: data)
+        }
+
+        if let string = payload as? String {
+            guard let data = string.data(using: .utf8) else { return nil }
+            return try JSONDecoder().decode([ChatMessage].self, from: data)
+        }
+
+        guard JSONSerialization.isValidJSONObject(payload) else { return nil }
+        let data = try JSONSerialization.data(withJSONObject: payload)
+        return try JSONDecoder().decode([ChatMessage].self, from: data)
+    }
+
+    private func logSocketEvent(_ title: String, data: Any) {
+        print("\n--- 🔌 [SOCKET \(title)] ---")
+        print("Room ID: \(currentRoomID ?? "-")")
+        print("Data: \(debugDescription(for: data))")
+        print("------------------------------")
+    }
+
+    private func debugDescription(for data: Any) -> String {
+        if let data = data as? Data {
+            return String(data: data, encoding: .utf8) ?? "\(data)"
+        }
+
+        if let string = data as? String {
+            return string
+        }
+
+        if JSONSerialization.isValidJSONObject(data),
+           let jsonData = try? JSONSerialization.data(withJSONObject: data, options: [.prettyPrinted, .sortedKeys]),
+           let string = String(data: jsonData, encoding: .utf8) {
+            return string
+        }
+
+        return "\(data)"
     }
 
     private func scheduleReconnectIfNeeded(generation: Int) {
@@ -224,30 +302,5 @@ final class ChatSocketManager: ChatSocketManagerProtocol {
                   self.currentRoomID == roomID else { return }
             self.openSocket(roomID: roomID, generation: generation)
         }
-    }
-
-    private func logSocketEvent(_ title: String, data: Any) {
-        print("\n--- 🔌 [SOCKET \(title)] ---")
-        print("Room ID: \(currentRoomID ?? "-")")
-        print("Data: \(debugDescription(for: data))")
-        print("------------------------------")
-    }
-
-    private func debugDescription(for data: Any) -> String {
-        if let data = data as? Data {
-            return String(data: data, encoding: .utf8) ?? "\(data)"
-        }
-
-        if let string = data as? String {
-            return string
-        }
-
-        if JSONSerialization.isValidJSONObject(data),
-           let jsonData = try? JSONSerialization.data(withJSONObject: data, options: [.prettyPrinted, .sortedKeys]),
-           let string = String(data: jsonData, encoding: .utf8) {
-            return string
-        }
-
-        return "\(data)"
     }
 }
