@@ -55,19 +55,22 @@ final class AuthSession {
         keychain.save(key: .refreshToken, value: tokens.refreshToken)
         keychain.save(key: .userID, value: tokens.userID)
         keychain.save(key: .nick, value: tokens.nick)
-        
+
         self.userID = tokens.userID
         self.nick = tokens.nick
+        UserSession.shared.set(from: tokens)
         state = .authenticated
     }
 
     func logout() {
         clearTokens()
+        UserSession.shared.clear()
         state = .unauthenticated
     }
 
     func expire() {
         clearTokens()
+        UserSession.shared.clear()
         state = .expired
     }
 
