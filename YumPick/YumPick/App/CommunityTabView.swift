@@ -31,7 +31,7 @@ struct CommunityTabView: View {
                             CommunityComposeView(mode: .edit(post), existingPost: post)
                         }
                     case .search:
-                        Text("검색")                      // 7단계에서 교체
+                        CommunitySearchView()
                     case .userPosts(let userId):
                         Text("유저 게시글: \(userId)")    // 8단계에서 교체
                     case .likedByMe:
