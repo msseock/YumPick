@@ -17,7 +17,7 @@ final class ChatViewModel {
     private(set) var isSending: Bool = false
     var errorMessage: String?
 
-    private let roomID: String
+    private(set) var currentRoomID: String
     private let currentUserID: String?
     private let client: ChatClientProtocol
     private let socketManager: ChatSocketManagerProtocol
@@ -33,7 +33,7 @@ final class ChatViewModel {
         repository: ChatRealmRepositoryProtocol = ChatRealmRepository(),
         outbox: ChatOutboxWorker = .shared
     ) {
-        self.roomID = roomID
+        self.currentRoomID = roomID
         self.currentUserID = currentUserID
         self.client = client
         self.socketManager = socketManager
@@ -46,7 +46,7 @@ final class ChatViewModel {
     func onAppear() {
         bindSocket()
         loadInitialLocalMessages()
-        socketManager.connect(roomID: roomID)
+        socketManager.connect(roomID: currentRoomID)
         Task { await syncRecentMessages() }
         outbox.start()
     }
@@ -71,7 +71,7 @@ final class ChatViewModel {
         do {
             guard let oldestDate = DateFormatManager.shared.date(fromChatISOString: oldest.createdAt) else { return }
             let older = try repository.fetchMessagesBefore(
-                roomID: roomID,
+                roomID: currentRoomID,
                 before: oldestDate,
                 limit: PagePolicy.olderPageSize
             )
@@ -96,7 +96,7 @@ final class ChatViewModel {
         let nowISO = DateFormatManager.shared.chatISOString(from: Date())
         let pending = ChatMessage(
             chatID: clientID,
-            roomID: roomID,
+            roomID: currentRoomID,
             content: trimmed,
             createdAt: nowISO,
             updatedAt: nowISO,
@@ -117,7 +117,7 @@ final class ChatViewModel {
         defer { isSending = false }
 
         do {
-            let sent = try await client.sendMessage(roomID: roomID, content: trimmed, files: files)
+            let sent = try await client.sendMessage(roomID: currentRoomID, content: trimmed, files: files)
             try repository.replacePending(clientID: clientID, with: sent)
             pendingClientIDs.remove(clientID)
             failedClientIDs.remove(clientID)
@@ -159,7 +159,7 @@ final class ChatViewModel {
                 guard let self else { return }
                 do {
                     try self.repository.saveAll([message], isRoomOpen: true)
-                    try self.repository.markAllRead(roomID: self.roomID)
+                    try self.repository.markAllRead(roomID: self.currentRoomID)
                     self.messages = self.mergeMessages(self.messages + [message])
                 } catch {
                     self.errorMessage = error.localizedDescription
@@ -177,7 +177,7 @@ final class ChatViewModel {
     private func loadInitialLocalMessages() {
         do {
             let local = try repository.fetchLatestMessages(
-                roomID: roomID,
+                roomID: currentRoomID,
                 limit: PagePolicy.initialLocalLimit
             )
             messages = local
@@ -194,17 +194,17 @@ final class ChatViewModel {
         defer { isLoading = false }
 
         do {
-            let lastDate = try repository.lastCreatedAt(roomID: roomID)
+            let lastDate = try repository.lastCreatedAt(roomID: currentRoomID)
 
             if let lastDate {
                 let cursor = DateFormatManager.shared.chatISOString(from: lastDate)
-                let fresh = try await client.fetchMessages(roomID: roomID, next: cursor)
+                let fresh = try await client.fetchMessages(roomID: currentRoomID, next: cursor)
                 try repository.saveAll(fresh, isRoomOpen: true)
                 messages = mergeMessages(messages + fresh)
             } else {
-                let all = try await client.fetchMessages(roomID: roomID, next: nil)
+                let all = try await client.fetchMessages(roomID: currentRoomID, next: nil)
                 try repository.saveAllInitial(all)
-                try repository.markAllRead(roomID: roomID)
+                try repository.markAllRead(roomID: currentRoomID)
                 messages = mergeMessages(all)
             }
         } catch {
