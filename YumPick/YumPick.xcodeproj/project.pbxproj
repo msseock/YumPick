@@ -10,6 +10,9 @@
 		C56B7AB82FA07BB400516EC7 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = C56B7AB72FA07BB400516EC7 /* FirebaseMessaging */; };
 		C56B7C5C2FA351CA00516EC7 /* iamport-ios in Frameworks */ = {isa = PBXBuildFile; productRef = C56B7C5B2FA351CA00516EC7 /* iamport-ios */; };
 		C5BC43D62F991D530014A0AF /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = C5BC43D52F991D530014A0AF /* Kingfisher */; };
+		C5C51C872FA9E5A10017490F /* Realm in Frameworks */ = {isa = PBXBuildFile; productRef = C5C51C862FA9E5A10017490F /* Realm */; };
+		C5C51C892FA9E5A10017490F /* RealmSwift in Frameworks */ = {isa = PBXBuildFile; productRef = C5C51C882FA9E5A10017490F /* RealmSwift */; };
+		C5C51C8C2FA9E6170017490F /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = C5C51C8B2FA9E6170017490F /* SocketIO */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -73,7 +76,10 @@
 			files = (
 				C56B7C5C2FA351CA00516EC7 /* iamport-ios in Frameworks */,
 				C56B7AB82FA07BB400516EC7 /* FirebaseMessaging in Frameworks */,
+				C5C51C872FA9E5A10017490F /* Realm in Frameworks */,
+				C5C51C892FA9E5A10017490F /* RealmSwift in Frameworks */,
 				C5BC43D62F991D530014A0AF /* Kingfisher in Frameworks */,
+				C5C51C8C2FA9E6170017490F /* SocketIO in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -137,6 +143,9 @@
 				C5BC43D52F991D530014A0AF /* Kingfisher */,
 				C56B7AB72FA07BB400516EC7 /* FirebaseMessaging */,
 				C56B7C5B2FA351CA00516EC7 /* iamport-ios */,
+				C5C51C862FA9E5A10017490F /* Realm */,
+				C5C51C882FA9E5A10017490F /* RealmSwift */,
+				C5C51C8B2FA9E6170017490F /* SocketIO */,
 			);
 			productName = YumPick;
 			productReference = C5BC43A72F99051F0014A0AF /* YumPick.app */;
@@ -224,6 +233,8 @@
 				C5BC43D42F991D530014A0AF /* XCRemoteSwiftPackageReference "Kingfisher" */,
 				C56B7AB62FA07BB400516EC7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				C56B7C5A2FA351CA00516EC7 /* XCRemoteSwiftPackageReference "iamport-ios" */,
+				C5C51C852FA9E5A10017490F /* XCRemoteSwiftPackageReference "realm-swift" */,
+				C5C51C8A2FA9E6170017490F /* XCRemoteSwiftPackageReference "socket" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C5BC43A82F99051F0014A0AF /* Products */;
@@ -658,6 +669,22 @@
 				minimumVersion = 8.8.1;
 			};
 		};
+		C5C51C852FA9E5A10017490F /* XCRemoteSwiftPackageReference "realm-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/realm/realm-swift";
+			requirement = {
+				kind = exactVersion;
+				version = 20.0.4;
+			};
+		};
+		C5C51C8A2FA9E6170017490F /* XCRemoteSwiftPackageReference "socket" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/socketio/socket.io-client-swift";
+			requirement = {
+				kind = exactVersion;
+				version = 16.1.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -675,6 +702,21 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C5BC43D42F991D530014A0AF /* XCRemoteSwiftPackageReference "Kingfisher" */;
 			productName = Kingfisher;
+		};
+		C5C51C862FA9E5A10017490F /* Realm */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C5C51C852FA9E5A10017490F /* XCRemoteSwiftPackageReference "realm-swift" */;
+			productName = Realm;
+		};
+		C5C51C882FA9E5A10017490F /* RealmSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C5C51C852FA9E5A10017490F /* XCRemoteSwiftPackageReference "realm-swift" */;
+			productName = RealmSwift;
+		};
+		C5C51C8B2FA9E6170017490F /* SocketIO */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C5C51C8A2FA9E6170017490F /* XCRemoteSwiftPackageReference "socket" */;
+			productName = SocketIO;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
