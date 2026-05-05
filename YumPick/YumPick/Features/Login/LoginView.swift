@@ -4,6 +4,7 @@ import AuthenticationServices
 struct LoginView: View {
     @Environment(AuthSession.self) private var authSession
     @State private var viewModel = LoginViewModel()
+    @State private var appleSignInCoordinator = AppleSignInCoordinator()
 
     var body: some View {
         NavigationStack {
@@ -95,18 +96,30 @@ struct LoginView: View {
     }
 
     private var appleLoginButton: some View {
-        SignInWithAppleButton(.signIn) { request in
-            request.requestedScopes = [.email, .fullName]
-        } onCompletion: { result in
-            Task {
-                if let tokens = await viewModel.handleAppleLoginResult(result) {
-                    authSession.login(tokens: tokens)
+        Button {
+            hideKeyboard()
+            appleSignInCoordinator.start { result in
+                Task {
+                    if let tokens = await viewModel.handleAppleLoginResult(result) {
+                        authSession.login(tokens: tokens)
+                    }
                 }
             }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "apple.logo")
+                    .font(.system(size: 18, weight: .semibold))
+
+                Text("Apple로 로그인")
+                    .font(YPFont.body1)
+            }
+            .foregroundStyle(YPColor.gray0)
+            .frame(maxWidth: .infinity)
+            .frame(height: 52)
+            .background(YPColor.textPrimary)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
-        .frame(height: 52)
-        .signInWithAppleButtonStyle(.black)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .buttonStyle(.plain)
         .padding(.top, 8)
         .disabled(viewModel.isLoading)
     }
@@ -120,5 +133,44 @@ struct LoginView: View {
                 .foregroundStyle(YPColor.textSecondary)
         }
         .padding(.top, 16)
+    }
+}
+
+private final class AppleSignInCoordinator: NSObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+    private var completion: ((Result<ASAuthorization, Error>) -> Void)?
+
+    func start(completion: @escaping (Result<ASAuthorization, Error>) -> Void) {
+        self.completion = completion
+
+        let request = ASAuthorizationAppleIDProvider().createRequest()
+        request.requestedScopes = [.email, .fullName]
+
+        let controller = ASAuthorizationController(authorizationRequests: [request])
+        controller.delegate = self
+        controller.presentationContextProvider = self
+        controller.performRequests()
+    }
+
+    func authorizationController(
+        controller: ASAuthorizationController,
+        didCompleteWithAuthorization authorization: ASAuthorization
+    ) {
+        completion?(.success(authorization))
+        completion = nil
+    }
+
+    func authorizationController(
+        controller: ASAuthorizationController,
+        didCompleteWithError error: Error
+    ) {
+        completion?(.failure(error))
+        completion = nil
+    }
+
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first { $0.isKeyWindow } ?? ASPresentationAnchor()
     }
 }
