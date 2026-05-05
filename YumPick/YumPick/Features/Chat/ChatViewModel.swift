@@ -24,6 +24,7 @@ final class ChatViewModel {
     private let repository: ChatRealmRepositoryProtocol
     private let outbox: ChatOutboxWorker
     private var cancellables = Set<AnyCancellable>()
+    private var isAppeared = false
 
     init(
         roomID: String,
@@ -44,6 +45,8 @@ final class ChatViewModel {
     // MARK: - Lifecycle
 
     func onAppear() {
+        guard !isAppeared else { return }
+        isAppeared = true
         bindSocket()
         loadInitialLocalMessages()
         socketManager.connect(roomID: currentRoomID)
@@ -52,6 +55,7 @@ final class ChatViewModel {
     }
 
     func onDisappear() {
+        isAppeared = false
         socketManager.disconnect()
         cancellables.removeAll()
     }
@@ -157,10 +161,10 @@ final class ChatViewModel {
         socketManager.messagePublisher
             .sink { [weak self] message in
                 guard let self else { return }
+                self.messages = self.mergeMessages(self.messages + [message])
                 do {
                     try self.repository.saveAll([message], isRoomOpen: true)
                     try self.repository.markAllRead(roomID: self.currentRoomID)
-                    self.messages = self.mergeMessages(self.messages + [message])
                 } catch {
                     self.errorMessage = error.localizedDescription
                 }
