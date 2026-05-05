@@ -11,6 +11,7 @@ enum CommunityPath: Hashable {
     case search
     case userPosts(userId: String)
     case likedByMe
+    case chatRoom(String)
 }
 
 struct CommunityTabView: View {
@@ -36,6 +37,8 @@ struct CommunityTabView: View {
                         CommunityPostListView(title: "작성한 게시글", mode: .userPosts(userId: userId))
                     case .likedByMe:
                         CommunityPostListView(title: "좋아요한 게시글", mode: .likedByMe)
+                    case .chatRoom(let roomID):
+                        ChatView(roomID: roomID)
                     }
                 }
         }
