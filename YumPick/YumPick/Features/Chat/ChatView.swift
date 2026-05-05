@@ -73,7 +73,6 @@ struct ChatView: View {
             )
         }
         .background(YPColor.backgroundPrimary)
-        .ignoresSafeArea(.keyboard, edges: .bottom)
         .task { viewModel.onAppear() }
         .onDisappear { viewModel.onDisappear() }
         .onChange(of: scenePhase) { _, phase in

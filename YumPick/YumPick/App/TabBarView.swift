@@ -39,7 +39,7 @@ struct TabBarView: View {
                 YPTabBar(selectedTab: $router.selectedTab)
             }
         }
-        .ignoresSafeArea(edges: .bottom)
+        .ignoresSafeArea(.container, edges: .bottom)
         .background(YPColor.backgroundPrimary)
     }
 }
