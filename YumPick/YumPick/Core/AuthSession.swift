@@ -69,6 +69,13 @@ final class AuthSession {
         state = .authenticated
     }
 
+    func updateCurrentUser(nick: String, profileImage: String?) {
+        keychain.save(key: .nick, value: nick)
+        self.nick = nick
+        UserSession.shared.nick = nick
+        UserSession.shared.profileImage = profileImage
+    }
+
     func logout() {
         clearTokens()
         state = .unauthenticated
