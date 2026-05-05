@@ -73,8 +73,14 @@ struct ChatView: View {
             )
         }
         .background(YPColor.backgroundPrimary)
-        .task { viewModel.onAppear() }
-        .onDisappear { viewModel.onDisappear() }
+        .task {
+            ChatPushHandler.shared.currentOpenRoomID = viewModel.currentRoomID
+            viewModel.onAppear()
+        }
+        .onDisappear {
+            ChatPushHandler.shared.currentOpenRoomID = nil
+            viewModel.onDisappear()
+        }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .active:     viewModel.onAppear()

@@ -30,13 +30,37 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         
     }
     
-    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        completionHandler([[.banner, .list, .sound]])
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        let userInfo = notification.request.content.userInfo
+        let roomID = userInfo["room_id"] as? String
+
+        if let roomID, roomID == ChatPushHandler.shared.currentOpenRoomID {
+            // 현재 보고 있는 채팅방의 푸시 — 배너/소리 suppress
+            Task { @MainActor in
+                ChatPushHandler.shared.handle(userInfo: userInfo, isUserTap: false)
+            }
+            completionHandler([])
+        } else {
+            Task { @MainActor in
+                ChatPushHandler.shared.handle(userInfo: userInfo, isUserTap: false)
+            }
+            completionHandler([.banner, .list, .sound])
+        }
     }
-    
-    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
         let userInfo = response.notification.request.content.userInfo
-        NotificationCenter.default.post(name: Notification.Name("didReceiveRemoteNotification"), object: nil, userInfo: userInfo)
+        Task { @MainActor in
+            ChatPushHandler.shared.handle(userInfo: userInfo, isUserTap: true)
+        }
         completionHandler()
     }
     

@@ -15,6 +15,7 @@ struct YumPickApp: App {
                 .environment(router)
                 .task {
                     NetworkManager.configure(onSessionExpired: authSession.expire)
+                    ChatPushHandler.shared.configure(router: router)
                 }
                 .onOpenURL { url in
                     Iamport.shared.receivedURL(url)
