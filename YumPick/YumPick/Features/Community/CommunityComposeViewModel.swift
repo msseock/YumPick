@@ -10,6 +10,9 @@ final class CommunityComposeViewModel {
     var title: String = ""
     var content: String = ""
     var storeId: String = ""
+    var selectedStoreName: String? = nil
+    var selectedStoreCategory: String? = nil
+    var selectedStoreImagePath: String? = nil
     var isSubmitting = false
     var errorMessage: String? = nil
     var didSubmit = false
@@ -39,9 +42,35 @@ final class CommunityComposeViewModel {
             category = post.category
             title = post.title
             content = post.content
-            storeId = post.store?.id ?? ""
+            applySelectedStore(post.store)
             existingFileURLs = post.files
         }
+    }
+
+    var hasSelectedStore: Bool {
+        !storeId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var selectedStoreDisplayName: String {
+        selectedStoreName?.nilIfBlank ?? (hasSelectedStore ? "선택된 가게" : "가게를 선택해 주세요")
+    }
+
+    var selectedStoreSubtitle: String? {
+        selectedStoreCategory?.nilIfBlank
+    }
+
+    func selectStore(_ store: StoreSummary) {
+        storeId = store.store_id
+        selectedStoreName = store.name
+        selectedStoreCategory = store.category
+        selectedStoreImagePath = store.store_image_urls?.first
+    }
+
+    func clearStoreSelection() {
+        storeId = ""
+        selectedStoreName = nil
+        selectedStoreCategory = nil
+        selectedStoreImagePath = nil
     }
 
     var canSubmit: Bool {
@@ -113,5 +142,19 @@ final class CommunityComposeViewModel {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func applySelectedStore(_ store: PostStore?) {
+        storeId = store?.id ?? ""
+        selectedStoreName = store?.name
+        selectedStoreCategory = store?.category
+        selectedStoreImagePath = store?.store_image_urls?.first
+    }
+}
+
+private extension String {
+    var nilIfBlank: String? {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }
