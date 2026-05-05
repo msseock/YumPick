@@ -440,6 +440,19 @@ private struct CommentRow: View {
                             .font(YPFont.caption2)
                             .foregroundStyle(YPColor.textTertiary)
                     }
+                    
+                    if isCommentOwner(creatorId) {
+                        Menu {
+                            Button { onEdit() } label: { Label("수정", systemImage: "pencil") }
+                            Button(role: .destructive) { onDelete() } label: { Label("삭제", systemImage: "trash") }
+                        } label: {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 14))
+                                .foregroundStyle(YPColor.textTertiary)
+                                .frame(width: 20, height: 20)
+                                .contentShape(Rectangle())
+                        }
+                    }
                 }
                 Text(content)
                     .font(YPFont.body3)
