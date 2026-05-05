@@ -10,6 +10,7 @@ struct PostPage {
 // MARK: - Protocol
 
 protocol CommunityClientProtocol {
+    func fetchBanners() async throws -> [Banner]
     func uploadFiles(parts: [MultipartData]) async throws -> [String]
     func createPost(_ request: CreatePostRequest) async throws -> PostDetail
     func fetchGeolocationPosts(longitude: Double, latitude: Double, category: String?, orderBy: String, next: String?, limit: Int?) async throws -> PostPage
@@ -50,6 +51,7 @@ struct UpdatePostRequest: Encodable {
 // MARK: - Endpoints
 
 private enum CommunityEndpoint: Endpoint {
+    case banners
     case uploadFiles(parts: [MultipartData])
     case createPost(CreatePostRequest)
     case geolocationPosts(longitude: Double, latitude: Double, category: String?, orderBy: String, next: String?, limit: Int?)
@@ -66,6 +68,7 @@ private enum CommunityEndpoint: Endpoint {
 
     var path: String {
         switch self {
+        case .banners:                           return "/v1/banners/main"
         case .uploadFiles:                       return "/v1/posts/files"
         case .createPost:                        return "/v1/posts"
         case .geolocationPosts:                  return "/v1/posts/geolocation"
@@ -97,6 +100,8 @@ private enum CommunityEndpoint: Endpoint {
 
     var parameters: RequestParameters {
         switch self {
+        case .banners:
+            return .none
         case .uploadFiles(let parts):
             return .multipart(parts)
         case .createPost(let body):
@@ -140,6 +145,10 @@ private enum CommunityEndpoint: Endpoint {
 }
 
 // MARK: - Private Response DTOs
+
+private struct BannerListResponse: Decodable {
+    let data: [Banner]
+}
 
 private struct PostsPageResponse: Decodable {
     let data: [PostSummary]
@@ -192,6 +201,13 @@ private struct UpdateCommentRequest: Encodable {
 // MARK: - Real Implementation
 
 final class CommunityClient: CommunityClientProtocol {
+
+    func fetchBanners() async throws -> [Banner] {
+        let response: BannerListResponse = try await NetworkManager.shared.request(
+            CommunityEndpoint.banners
+        )
+        return response.data
+    }
 
     func uploadFiles(parts: [MultipartData]) async throws -> [String] {
         let response: FileUploadResponse = try await NetworkManager.shared.request(
@@ -276,6 +292,7 @@ final class CommunityClient: CommunityClientProtocol {
 // MARK: - Mock
 
 final class MockCommunityClient: CommunityClientProtocol {
+    var fetchBannersResult: Result<[Banner], Error> = .success([])
     var uploadFilesResult: Result<[String], Error> = .success([])
     var createPostResult: Result<PostDetail, Error> = .failure(MockError.notImplemented)
     var fetchGeolocationPostsResult: Result<PostPage, Error> = .success(PostPage(posts: [], nextCursor: nil))
@@ -293,6 +310,7 @@ final class MockCommunityClient: CommunityClientProtocol {
 
     enum MockError: Error { case notImplemented }
 
+    func fetchBanners() async throws -> [Banner] { try fetchBannersResult.get() }
     func uploadFiles(parts: [MultipartData]) async throws -> [String] { try uploadFilesResult.get() }
     func createPost(_ request: CreatePostRequest) async throws -> PostDetail { try createPostResult.get() }
     func fetchGeolocationPosts(longitude: Double, latitude: Double, category: String?, orderBy: String, next: String?, limit: Int?) async throws -> PostPage { try fetchGeolocationPostsResult.get() }
