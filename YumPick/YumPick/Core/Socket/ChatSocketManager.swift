@@ -80,12 +80,35 @@ final class ChatSocketManager: ChatSocketManagerProtocol {
             extraHeaders["Authorization"] = accessToken
         }
 
+        #if DEBUG
+        let shouldLogSocketIO = true
+        #else
+        let shouldLogSocketIO = false
+        #endif
+
+        logSocketEvent(
+            "CONNECTING",
+            data: [
+                "roomID": roomID,
+                "enginePath": "/socket.io/",
+                "namespace": "/chats-\(roomID)",
+                "baseURL": SecretConstants.baseURL,
+                "transport": "websocket",
+                "engineIOVersion": "4",
+                "socketIOVersion": "3",
+                "hasAuthorization": extraHeaders["Authorization"] != nil,
+                "hasSeSACKey": extraHeaders["SeSACKey"] != nil,
+                "generation": generation,
+                "reconnectAttempt": reconnectAttempt
+            ]
+        )
+
         manager = SocketManager(
             socketURL: url,
             config: [
                 .path("/chats-\(roomID)"),
                 .extraHeaders(extraHeaders),
-                .log(false),
+                .log(shouldLogSocketIO),
                 .compress,
                 .reconnects(false),
                 .forceWebsockets(true)
@@ -99,26 +122,57 @@ final class ChatSocketManager: ChatSocketManagerProtocol {
     private func attachHandlers(roomID: String, generation: Int) {
         socket?.on(clientEvent: .connect) { [weak self] _, _ in
             guard self?.connectionGeneration == generation else { return }
+            self?.logSocketEvent("CONNECTED", data: ["roomID": roomID])
             self?.reconnectAttempt = 0
+        }
+
+        socket?.on(clientEvent: .statusChange) { [weak self] dataArray, _ in
+            guard let self, self.connectionGeneration == generation else { return }
+            self.logSocketEvent("STATUS CHANGE", data: dataArray)
         }
 
         socket?.on("chat") { [weak self] dataArray, _ in
             guard let self, self.connectionGeneration == generation, let payload = dataArray.first else { return }
+            self.logSocketEvent("INCOMING CHAT", data: payload)
             do {
                 let data = try JSONSerialization.data(withJSONObject: payload)
                 let message = try JSONDecoder().decode(ChatMessage.self, from: data)
+                self.logSocketEvent(
+                    "DECODED CHAT",
+                    data: [
+                        "chatID": message.chatID,
+                        "roomID": message.roomID,
+                        "senderID": message.sender.userID,
+                        "content": message.content,
+                        "files": message.files
+                    ]
+                )
                 self.messageSubject.send(message)
             } catch {
+                print("❌ [SOCKET CHAT DECODE FAILED] payload: \(payload)")
+                print("❌ [SOCKET CHAT DECODE FAILED] error: \(error)")
                 self.errorSubject.send(error)
             }
         }
 
         socket?.on(clientEvent: .error) { [weak self] data, _ in
-            self?.handleSocketError(data: data, roomID: roomID, generation: generation)
+            guard let self, self.connectionGeneration == generation else { return }
+            self.logSocketEvent("ERROR", data: data)
+            self.handleSocketError(data: data, roomID: roomID, generation: generation)
         }
 
-        socket?.on(clientEvent: .disconnect) { [weak self] _, _ in
-            self?.scheduleReconnectIfNeeded(generation: generation)
+        socket?.on(clientEvent: .disconnect) { [weak self] dataArray, _ in
+            guard let self, self.connectionGeneration == generation else { return }
+            self.logSocketEvent(
+                "DISCONNECTED",
+                data: [
+                    "roomID": roomID,
+                    "reason": dataArray,
+                    "generation": generation,
+                    "nextReconnectAttempt": self.reconnectAttempt + 1
+                ]
+            )
+            self.scheduleReconnectIfNeeded(generation: generation)
         }
     }
 
@@ -151,6 +205,15 @@ final class ChatSocketManager: ChatSocketManagerProtocol {
         guard let roomID = currentRoomID else { return }
         reconnectAttempt += 1
         let delay = min(pow(2.0, Double(reconnectAttempt)), 30.0)
+        logSocketEvent(
+            "RECONNECT SCHEDULED",
+            data: [
+                "roomID": roomID,
+                "attempt": reconnectAttempt,
+                "delay": delay,
+                "generation": generation
+            ]
+        )
         reconnectTask?.cancel()
         reconnectTask = Task { [weak self] in
             let nanoseconds = UInt64(delay * 1_000_000_000)
@@ -161,5 +224,30 @@ final class ChatSocketManager: ChatSocketManagerProtocol {
                   self.currentRoomID == roomID else { return }
             self.openSocket(roomID: roomID, generation: generation)
         }
+    }
+
+    private func logSocketEvent(_ title: String, data: Any) {
+        print("\n--- 🔌 [SOCKET \(title)] ---")
+        print("Room ID: \(currentRoomID ?? "-")")
+        print("Data: \(debugDescription(for: data))")
+        print("------------------------------")
+    }
+
+    private func debugDescription(for data: Any) -> String {
+        if let data = data as? Data {
+            return String(data: data, encoding: .utf8) ?? "\(data)"
+        }
+
+        if let string = data as? String {
+            return string
+        }
+
+        if JSONSerialization.isValidJSONObject(data),
+           let jsonData = try? JSONSerialization.data(withJSONObject: data, options: [.prettyPrinted, .sortedKeys]),
+           let string = String(data: jsonData, encoding: .utf8) {
+            return string
+        }
+
+        return "\(data)"
     }
 }
