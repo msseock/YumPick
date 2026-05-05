@@ -15,6 +15,8 @@ struct VideoThumbnailView: View {
                 Image(uiImage: thumbnail)
                     .resizable()
                     .scaledToFill()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
             }
 
             if showsPlayIcon {
@@ -24,6 +26,7 @@ struct VideoThumbnailView: View {
                     .shadow(radius: 4)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
         .task(id: path) {
             await loadThumbnail()

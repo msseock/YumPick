@@ -10,11 +10,19 @@ enum CommunityOrder: String, CaseIterable {
         case .popular: return "인기순"
         }
     }
+
+    var next: CommunityOrder {
+        switch self {
+        case .latest: return .popular
+        case .popular: return .latest
+        }
+    }
 }
 
 @Observable
 final class CommunityViewModel {
     var posts: [PostSummary] = []
+    var banners: [Banner] = []
     var isLoading = false
     var isPageLoading = false
     var errorMessage: String? = nil
@@ -26,6 +34,7 @@ final class CommunityViewModel {
     private(set) var hasMore = true
     private var loadedCursors: Set<String> = []
     private var likeRequestPostIds: Set<String> = []
+    private var hasFetchedBanners = false
 
     var canLoadMore: Bool { hasMore && !isPageLoading }
 
@@ -105,6 +114,16 @@ final class CommunityViewModel {
         }
     }
 
+    func fetchBannersIfNeeded() async {
+        guard !hasFetchedBanners else { return }
+        do {
+            banners = try await client.fetchBanners()
+            hasFetchedBanners = true
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func loadMore() async {
         await fetchPosts(reset: false)
     }
@@ -130,6 +149,25 @@ final class CommunityViewModel {
             PostLikeStateStore.shared.update(postId: postId, isLiked: currentLiked)
             updateVisiblePostLikeState(postId: postId, isLiked: currentLiked, previousLiked: newLiked)
         }
+    }
+
+    func webViewRoute(for banner: Banner) -> HomeBannerWebViewRoute? {
+        guard banner.payload.type == "WEBVIEW" else { return nil }
+        guard let url = Self.resolveWebViewURL(from: banner.payload.value) else { return nil }
+        return HomeBannerWebViewRoute(url: url)
+    }
+
+    private static func resolveWebViewURL(from value: String) -> URL? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        if let url = URL(string: trimmed), url.scheme != nil, url.host != nil {
+            return url
+        }
+
+        let base = SecretConstants.baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let path = trimmed.hasPrefix("/") ? trimmed : "/\(trimmed)"
+        return URL(string: base + path)
     }
 
     private func updateVisiblePostLikeState(postId: String, isLiked: Bool, previousLiked: Bool? = nil) {
