@@ -10,8 +10,13 @@ final class UserSession {
     private init() {}
 
     func set(from bundle: AuthTokenBundle) {
-        userID = bundle.userID
-        nick = bundle.nick
+        set(userID: bundle.userID, nick: bundle.nick)
+    }
+
+    func set(userID: String, nick: String, profileImage: String? = nil) {
+        self.userID = userID
+        self.nick = nick
+        self.profileImage = profileImage
     }
 
     func clear() {

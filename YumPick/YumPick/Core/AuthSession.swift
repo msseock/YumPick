@@ -35,6 +35,13 @@ final class AuthSession {
             return
         }
 
+        guard let userID, let nick else {
+            clearTokens()
+            state = .unauthenticated
+            return
+        }
+        UserSession.shared.set(userID: userID, nick: nick)
+
         if let accessToken, !accessToken.isExpiredJWT {
             state = .authenticated
             return
@@ -64,13 +71,11 @@ final class AuthSession {
 
     func logout() {
         clearTokens()
-        UserSession.shared.clear()
         state = .unauthenticated
     }
 
     func expire() {
         clearTokens()
-        UserSession.shared.clear()
         state = .expired
     }
 
@@ -81,6 +86,7 @@ final class AuthSession {
         keychain.delete(key: .nick)
         self.userID = nil
         self.nick = nil
+        UserSession.shared.clear()
         HomeStoreCache.clear()
     }
 }
