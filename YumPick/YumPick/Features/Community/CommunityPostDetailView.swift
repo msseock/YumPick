@@ -93,6 +93,7 @@ struct CommunityPostDetailView: View {
                 commentsSection(comments: post.comments)
             }
         }
+        .scrollDismissesKeyboard(.immediately)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             commentInputBar
         }

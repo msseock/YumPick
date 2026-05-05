@@ -28,6 +28,7 @@ struct LoginView: View {
             }
             .padding(.horizontal, 24)
             .background(YPColor.backgroundPrimary)
+            .tapToHideKeyboard()
         }
         .alert("로그인 오류", isPresented: .constant(viewModel.errorMessage != nil)) {
             Button("확인") { viewModel.errorMessage = nil }

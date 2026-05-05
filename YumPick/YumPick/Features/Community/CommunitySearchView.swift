@@ -13,6 +13,7 @@ struct CommunitySearchView: View {
         .navigationTitle("검색")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { isSearchFocused = true }
+        .tapToHideKeyboard()
     }
 
     private var searchBar: some View {
@@ -63,6 +64,7 @@ struct CommunitySearchView: View {
                 }
                 .padding(16)
             }
+            .scrollDismissesKeyboard(.immediately)
         }
     }
 

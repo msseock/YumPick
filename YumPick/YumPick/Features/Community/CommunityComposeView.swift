@@ -80,7 +80,9 @@ struct CommunityComposeView: View {
                 }
             }
             .padding(16)
+            .tapToHideKeyboard()
         }
+        .scrollDismissesKeyboard(.immediately)
         .navigationTitle(navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

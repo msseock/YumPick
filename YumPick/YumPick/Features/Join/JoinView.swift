@@ -15,7 +15,9 @@ struct JoinView: View {
                 submitButton
             }
             .padding(24)
+            .tapToHideKeyboard()
         }
+        .scrollDismissesKeyboard(.immediately)
         .background(YPColor.backgroundPrimary)
         .navigationTitle("회원가입")
         .navigationBarTitleDisplayMode(.inline)

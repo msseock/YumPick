@@ -29,6 +29,7 @@ struct StoreDetailView: View {
             }
         }
         .task { await viewModel.load() }
+        .tapToHideKeyboard()
     }
 
     // MARK: - Main Content
@@ -48,6 +49,7 @@ struct StoreDetailView: View {
                     }
                 }
             }
+            .scrollDismissesKeyboard(.immediately)
             .safeAreaInset(edge: .bottom) {
                 Color.clear.frame(height: 80)
             }
