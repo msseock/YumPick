@@ -6,14 +6,10 @@ private enum HomeScrollTarget {
 
 struct HomeView: View {
     @State private var viewModel = HomeViewModel()
-    @State private var bannerPage = 0
-    @State private var bannerAspectRatios: [Int: CGFloat] = [:]
     @State private var bannerWebViewRoute: HomeBannerWebViewRoute?
     @State private var isNearbyPaginationArmed = false
     @State private var isNearbyPaginationTriggerVisible = false
     @State private var nearbyPaginationTask: Task<Void, Never>?
-
-    private let defaultBannerAspectRatio: CGFloat = 390 / 140
 
     var body: some View {
         Group {
@@ -228,60 +224,10 @@ struct HomeView: View {
 
     // MARK: - Banner
 
-    @ViewBuilder
     private var bannerSection: some View {
-        if viewModel.banners.isEmpty {
-            Color(YPColor.backgroundSecondary)
-                .frame(maxWidth: .infinity)
-                .aspectRatio(defaultBannerAspectRatio, contentMode: .fit)
-        } else {
-            TabView(selection: $bannerPage) {
-                ForEach(Array(viewModel.banners.enumerated()), id: \.offset) { index, banner in
-                    Button {
-                        bannerWebViewRoute = viewModel.webViewRoute(for: banner)
-                    } label: {
-                        CachedImage(path: banner.imageUrl) { imageSize in
-                            updateBannerAspectRatio(
-                                for: index,
-                                imageSize: imageSize
-                            )
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .clipped()
-                    }
-                    .buttonStyle(.plain)
-                    .tag(index)
-                }
-            }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .aspectRatio(currentBannerAspectRatio, contentMode: .fit)
-            .overlay(alignment: .bottomTrailing) {
-                Text(bannerIndexText)
-                    .font(YPFont.caption1)
-                    .foregroundStyle(YPColor.backgroundPrimary)
-                    .padding(.horizontal, 8)
-                    .frame(height: 24)
-                    .background(YPColor.gray90.opacity(0.55))
-                    .clipShape(Capsule())
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 8)
-            }
+        YPBannerCarousel(banners: viewModel.banners) { banner in
+            bannerWebViewRoute = viewModel.webViewRoute(for: banner)
         }
-    }
-
-    private var currentBannerAspectRatio: CGFloat {
-        bannerAspectRatios[bannerPage] ?? defaultBannerAspectRatio
-    }
-
-    private var bannerIndexText: String {
-        let count = viewModel.banners.count
-        let current = min(bannerPage + 1, count)
-        return "\(current)/\(count)"
-    }
-
-    private func updateBannerAspectRatio(for index: Int, imageSize: CGSize) {
-        guard imageSize.width > 0, imageSize.height > 0 else { return }
-        bannerAspectRatios[index] = imageSize.width / imageSize.height
     }
 
     // MARK: - Pickup Stores
