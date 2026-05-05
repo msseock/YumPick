@@ -21,15 +21,17 @@ final class ChatSocketManager: ChatSocketManagerProtocol {
     private var currentRoomID: String?
     private var reconnectAttempt: Int = 0
     private var didRefreshTokenForCurrentSession: Bool = false
+    private var reconnectTask: Task<Void, Never>?
+    private var connectionGeneration: Int = 0
 
     private let messageSubject = PassthroughSubject<ChatMessage, Never>()
     private let errorSubject = PassthroughSubject<Error, Never>()
 
     var messagePublisher: AnyPublisher<ChatMessage, Never> {
-        messageSubject.receive(on: DispatchQueue.main).eraseToAnyPublisher()
+        messageSubject.receive(on: RunLoop.main).eraseToAnyPublisher()
     }
     var errorPublisher: AnyPublisher<Error, Never> {
-        errorSubject.receive(on: DispatchQueue.main).eraseToAnyPublisher()
+        errorSubject.receive(on: RunLoop.main).eraseToAnyPublisher()
     }
 
     init(keychain: KeychainManager = .shared) {
@@ -37,24 +39,37 @@ final class ChatSocketManager: ChatSocketManagerProtocol {
     }
 
     func connect(roomID: String) {
-        disconnect()
+        print("소켓 연결")
+        closeSocket(clearRoom: false)
         currentRoomID = roomID
         reconnectAttempt = 0
         didRefreshTokenForCurrentSession = false
-        openSocket(roomID: roomID)
+        connectionGeneration += 1
+        openSocket(roomID: roomID, generation: connectionGeneration)
     }
 
     func disconnect() {
-        socket?.disconnect()
-        socket?.removeAllHandlers()
-        socket = nil
-        manager = nil
-        currentRoomID = nil
+        print("소켓 연결 해제")
+        closeSocket(clearRoom: true)
     }
 
     // MARK: - Private
 
-    private func openSocket(roomID: String) {
+    private func closeSocket(clearRoom: Bool) {
+        reconnectTask?.cancel()
+        reconnectTask = nil
+        connectionGeneration += 1
+        socket?.removeAllHandlers()
+        socket?.disconnect()
+        socket = nil
+        manager = nil
+        if clearRoom {
+            currentRoomID = nil
+        }
+    }
+
+    private func openSocket(roomID: String, generation: Int) {
+        guard generation == connectionGeneration else { return }
         guard let url = URL(string: SecretConstants.baseURL) else {
             errorSubject.send(NetworkError.invalidURL)
             return
@@ -72,21 +87,23 @@ final class ChatSocketManager: ChatSocketManagerProtocol {
                 .extraHeaders(extraHeaders),
                 .log(false),
                 .compress,
-                .reconnects(false)
+                .reconnects(false),
+                .forceWebsockets(true)
             ]
         )
         socket = manager?.defaultSocket
-        attachHandlers(roomID: roomID)
+        attachHandlers(roomID: roomID, generation: generation)
         socket?.connect()
     }
 
-    private func attachHandlers(roomID: String) {
+    private func attachHandlers(roomID: String, generation: Int) {
         socket?.on(clientEvent: .connect) { [weak self] _, _ in
+            guard self?.connectionGeneration == generation else { return }
             self?.reconnectAttempt = 0
         }
 
         socket?.on("chat") { [weak self] dataArray, _ in
-            guard let self, let payload = dataArray.first else { return }
+            guard let self, self.connectionGeneration == generation, let payload = dataArray.first else { return }
             do {
                 let data = try JSONSerialization.data(withJSONObject: payload)
                 let message = try JSONDecoder().decode(ChatMessage.self, from: data)
@@ -97,15 +114,16 @@ final class ChatSocketManager: ChatSocketManagerProtocol {
         }
 
         socket?.on(clientEvent: .error) { [weak self] data, _ in
-            self?.handleSocketError(data: data, roomID: roomID)
+            self?.handleSocketError(data: data, roomID: roomID, generation: generation)
         }
 
         socket?.on(clientEvent: .disconnect) { [weak self] _, _ in
-            self?.scheduleReconnectIfNeeded()
+            self?.scheduleReconnectIfNeeded(generation: generation)
         }
     }
 
-    private func handleSocketError(data: [Any], roomID: String) {
+    private func handleSocketError(data: [Any], roomID: String, generation: Int) {
+        guard generation == connectionGeneration else { return }
         let description = data.map { "\($0)" }.joined(separator: " ")
         let isAuth = description.contains("401") || description.lowercased().contains("unauthorized")
 
@@ -114,7 +132,9 @@ final class ChatSocketManager: ChatSocketManagerProtocol {
             Task { [weak self] in
                 do {
                     try await NetworkManager.shared.refreshAuthorization()
-                    self?.openSocket(roomID: roomID)
+                    self?.closeSocket(clearRoom: false)
+                    guard let generation = self?.connectionGeneration else { return }
+                    self?.openSocket(roomID: roomID, generation: generation)
                 } catch {
                     self?.errorSubject.send(error)
                 }
@@ -123,16 +143,23 @@ final class ChatSocketManager: ChatSocketManagerProtocol {
         }
 
         errorSubject.send(NetworkError.unknown)
-        scheduleReconnectIfNeeded()
+        scheduleReconnectIfNeeded(generation: generation)
     }
 
-    private func scheduleReconnectIfNeeded() {
+    private func scheduleReconnectIfNeeded(generation: Int) {
+        guard generation == connectionGeneration else { return }
         guard let roomID = currentRoomID else { return }
         reconnectAttempt += 1
         let delay = min(pow(2.0, Double(reconnectAttempt)), 30.0)
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
-            guard let self, self.currentRoomID == roomID else { return }
-            self.openSocket(roomID: roomID)
+        reconnectTask?.cancel()
+        reconnectTask = Task { [weak self] in
+            let nanoseconds = UInt64(delay * 1_000_000_000)
+            try? await Task.sleep(nanoseconds: nanoseconds)
+            guard !Task.isCancelled else { return }
+            guard let self,
+                  self.connectionGeneration == generation,
+                  self.currentRoomID == roomID else { return }
+            self.openSocket(roomID: roomID, generation: generation)
         }
     }
 }
