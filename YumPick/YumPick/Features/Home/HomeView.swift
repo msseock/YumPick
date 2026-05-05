@@ -82,10 +82,6 @@ struct HomeView: View {
                 .foregroundStyle(YPColor.textPrimary)
                 .lineLimit(1)
 
-            Image(systemName: "chevron.down")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(YPColor.textPrimary)
-
             Spacer()
         }
         .frame(height: 28)

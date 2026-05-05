@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 
 private let seoulCityHall = Geolocation(longitude: 126.9780, latitude: 37.5665)
@@ -339,6 +340,17 @@ final class HomeViewModel {
         }
         let geo = await locationManager.currentLocation() ?? seoulCityHall
         currentGeolocation = geo
+        await updateLocationTitle(from: geo)
         return geo
+    }
+
+    private func updateLocationTitle(from geo: Geolocation) async {
+        let location = CLLocation(latitude: geo.latitude, longitude: geo.longitude)
+        let placemarks = try? await CLGeocoder().reverseGeocodeLocation(location)
+        guard let placemark = placemarks?.first else { return }
+        let parts = [placemark.locality, placemark.subLocality].compactMap { $0 }
+        if !parts.isEmpty {
+            currentLocationTitle = parts.joined(separator: " ")
+        }
     }
 }
