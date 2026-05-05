@@ -62,9 +62,12 @@ struct CommunityPostDetailView: View {
 
                     HStack(spacing: 8) {
                         profileImage(path: post.creator.profileImage)
-                        Text(post.creator.nick)
-                            .font(YPFont.body3Bold)
-                            .foregroundStyle(YPColor.textPrimary)
+                        NavigationLink(value: CommunityPath.userPosts(userId: post.creator.user_id)) {
+                            Text(post.creator.nick)
+                                .font(YPFont.body3Bold)
+                                .foregroundStyle(YPColor.textPrimary)
+                        }
+                        .buttonStyle(.plain)
                         Spacer()
                         Text(DateFormatManager.shared.relativeDate(from: post.createdAt))
                             .font(YPFont.caption1)

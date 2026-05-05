@@ -33,9 +33,9 @@ struct CommunityTabView: View {
                     case .search:
                         CommunitySearchView()
                     case .userPosts(let userId):
-                        Text("유저 게시글: \(userId)")    // 8단계에서 교체
+                        CommunityPostListView(title: "작성한 게시글", mode: .userPosts(userId: userId))
                     case .likedByMe:
-                        Text("내 좋아요 게시글")          // 8단계에서 교체
+                        CommunityPostListView(title: "좋아요한 게시글", mode: .likedByMe)
                     }
                 }
         }
