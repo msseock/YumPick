@@ -112,9 +112,12 @@ private struct SearchResultCard: View {
                 }
                 Spacer()
                 if let path = post.files.first {
-                    CachedImage(path: path)
-                        .frame(width: 60, height: 60)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    ZStack {
+                        CachedImage(path: path)
+                        if isVideoPath(path) { VideoThumbnailOverlay() }
+                    }
+                    .frame(width: 60, height: 60)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
             }
             Text(post.creator.nick)

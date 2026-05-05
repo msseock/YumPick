@@ -216,9 +216,12 @@ private struct PostCard: View {
                 Spacer()
 
                 if let imagePath = post.files.first {
-                    CachedImage(path: imagePath)
-                        .frame(width: 72, height: 72)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    ZStack {
+                        CachedImage(path: imagePath)
+                        if isVideoPath(imagePath) { VideoThumbnailOverlay() }
+                    }
+                    .frame(width: 72, height: 72)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
             }
 

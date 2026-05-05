@@ -104,11 +104,17 @@ struct CommunityPostDetailView: View {
     private func mediaCarousel(files: [String]) -> some View {
         TabView {
             ForEach(Array(files.enumerated()), id: \.offset) { _, path in
-                CachedImage(path: path)
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 280)
-                    .clipped()
+                Group {
+                    if isVideoPath(path) {
+                        VideoPlayerView(path: path)
+                    } else {
+                        CachedImage(path: path)
+                            .scaledToFill()
+                            .clipped()
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 280)
             }
         }
         .tabViewStyle(.page)
