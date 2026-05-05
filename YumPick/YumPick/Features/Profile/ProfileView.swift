@@ -10,6 +10,20 @@ struct ProfileView: View {
                 .font(YPFont.title1)
                 .foregroundStyle(YPColor.textPrimary)
 
+            NavigationLink(value: ProfilePath.chatRooms) {
+                HStack(spacing: 8) {
+                    Image(systemName: "bubble.left.and.bubble.right")
+                    Text("채팅")
+                        .font(YPFont.body2)
+                }
+                .foregroundStyle(YPColor.textPrimary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(YPColor.backgroundSecondary)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+            .padding(.horizontal, 24)
+
             Button("로그아웃") {
                 Task { await viewModel.logout() }
             }
