@@ -160,7 +160,7 @@ final class NetworkManager {
         switch endpoint.parameters {
         case .query(let params):
             var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-            components?.queryItems = params.map { URLQueryItem(name: $0.key, value: $0.value) }
+            components?.percentEncodedQueryItems = percentEncodedQueryItems(from: params)
             if let resolvedURL = components?.url {
                 request.url = resolvedURL
             }
@@ -181,6 +181,18 @@ final class NetworkManager {
         }
 
         return request
+    }
+
+    private func percentEncodedQueryItems(from params: [String: String]) -> [URLQueryItem] {
+        var allowed = CharacterSet.urlQueryAllowed
+        allowed.remove(charactersIn: ":#[]@!$&'()*+,;=")
+
+        return params.map { name, value in
+            URLQueryItem(
+                name: name.addingPercentEncoding(withAllowedCharacters: allowed) ?? name,
+                value: value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
+            )
+        }
     }
 
     private func validate(response: URLResponse, data: Data) throws {
