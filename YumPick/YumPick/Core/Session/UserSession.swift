@@ -20,6 +20,4 @@ final class UserSession {
         profileImage = nil
     }
 
-    // asSender는 ChatSender 도메인 타입 정의(ChatClient.swift) 후 extension으로 추가
-
 }
