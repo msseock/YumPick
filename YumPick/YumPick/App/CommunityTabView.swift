@@ -23,7 +23,9 @@ struct CommunityTabView: View {
                 .navigationDestination(for: CommunityPath.self) { destination in
                     switch destination {
                     case .detail(let postId):
-                        CommunityPostDetailView(postId: postId)
+                        CommunityPostDetailView(postId: postId) { roomID in
+                            path.append(.chatRoom(roomID))
+                        }
                     case .compose(let mode):
                         switch mode {
                         case .create:

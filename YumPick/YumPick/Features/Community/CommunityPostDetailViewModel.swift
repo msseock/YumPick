@@ -30,10 +30,26 @@ final class CommunityPostDetailViewModel {
 
     private(set) var didDeletePost = false
 
-    private let client: CommunityClientProtocol
+    var chatRoomToOpen: String?
 
-    init(client: CommunityClientProtocol = CommunityClient()) {
+    private let client: CommunityClientProtocol
+    private let chatClient: ChatClientProtocol
+
+    init(
+        client: CommunityClientProtocol = CommunityClient(),
+        chatClient: ChatClientProtocol = ChatClient()
+    ) {
         self.client = client
+        self.chatClient = chatClient
+    }
+
+    func startChat(opponentUserID: String) async {
+        do {
+            let room = try await chatClient.createOrFetchRoom(opponentUserID: opponentUserID)
+            chatRoomToOpen = room.roomID
+        } catch {
+            presentError(error.localizedDescription)
+        }
     }
 
     // MARK: - Post

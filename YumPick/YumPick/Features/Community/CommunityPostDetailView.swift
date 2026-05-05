@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CommunityPostDetailView: View {
     let postId: String
+    var onOpenChatRoom: ((String) -> Void)?
 
     @State private var viewModel = CommunityPostDetailViewModel()
     @FocusState private var isInputFocused: Bool
@@ -59,6 +60,11 @@ struct CommunityPostDetailView: View {
         .onChange(of: viewModel.didDeletePost) { _, deleted in
             if deleted { dismiss() }
         }
+        .onChange(of: viewModel.chatRoomToOpen) { _, roomID in
+            guard let roomID else { return }
+            onOpenChatRoom?(roomID)
+            viewModel.chatRoomToOpen = nil
+        }
         .task { await viewModel.loadDetail(postId: postId) }
     }
 
@@ -87,6 +93,17 @@ struct CommunityPostDetailView: View {
                                 .foregroundStyle(YPColor.textPrimary)
                         }
                         .buttonStyle(.plain)
+                        if !viewModel.isOwner {
+                            Button {
+                                Task { await viewModel.startChat(opponentUserID: post.creator.user_id) }
+                            } label: {
+                                Image(systemName: "bubble.left")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundStyle(YPColor.textSecondary)
+                                    .frame(width: 28, height: 28)
+                            }
+                            .buttonStyle(.plain)
+                        }
                         Spacer()
                         Text(DateFormatManager.shared.relativeDate(from: post.createdAt))
                             .font(YPFont.caption1)
