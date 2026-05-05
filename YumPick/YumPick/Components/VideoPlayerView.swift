@@ -12,6 +12,7 @@ func isVideoPath(_ path: String) -> Bool {
 
 struct VideoPlayerView: View {
     let path: String
+    var autoPlay: Bool = false
 
     @State private var player: AVPlayer? = nil
     @State private var isPlaying = false
@@ -35,6 +36,11 @@ struct VideoPlayerView: View {
                                 .foregroundStyle(.white.opacity(0.9))
                         }
                     }
+            }
+        }
+        .onAppear {
+            if autoPlay && player == nil {
+                setupAndPlay()
             }
         }
         .onDisappear {
