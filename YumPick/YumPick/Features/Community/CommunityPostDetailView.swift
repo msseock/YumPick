@@ -7,20 +7,39 @@ struct CommunityPostDetailView: View {
     @FocusState private var isInputFocused: Bool
     @Environment(\.dismiss) private var dismiss
 
+    @Namespace private var mediaNamespace
+    @State private var selectedMediaIndex: Int? = nil
+
+    private var isLightboxActive: Bool { selectedMediaIndex != nil }
+
     var body: some View {
-        Group {
-            if viewModel.isLoading {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let post = viewModel.post {
-                postContent(post)
-            } else if viewModel.errorMessage != nil {
-                errorView
+        ZStack {
+            Group {
+                if viewModel.isLoading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let post = viewModel.post {
+                    postContent(post)
+                } else if viewModel.errorMessage != nil {
+                    errorView
+                }
+            }
+
+            if let post = viewModel.post, isLightboxActive {
+                MediaLightboxView(
+                    files: post.files,
+                    selectedIndex: $selectedMediaIndex,
+                    namespace: mediaNamespace
+                )
+                .ignoresSafeArea()
+                .transition(.opacity)
+                .zIndex(10)
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(isLightboxActive ? .hidden : .visible, for: .navigationBar)
         .toolbar {
-            if viewModel.isOwner {
+            if viewModel.isOwner && !isLightboxActive {
                 ToolbarItem(placement: .topBarTrailing) { ownerMenu }
             }
         }
@@ -95,7 +114,7 @@ struct CommunityPostDetailView: View {
         }
         .scrollDismissesKeyboard(.immediately)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            commentInputBar
+            if !isLightboxActive { commentInputBar }
         }
         .onTapGesture { isInputFocused = false }
     }
@@ -104,18 +123,26 @@ struct CommunityPostDetailView: View {
 
     private func mediaCarousel(files: [String]) -> some View {
         TabView {
-            ForEach(Array(files.enumerated()), id: \.offset) { _, path in
+            ForEach(Array(files.enumerated()), id: \.offset) { idx, path in
                 Group {
                     if isVideoPath(path) {
-                        VideoPlayerView(path: path)
+                        VideoThumbnailView(path: path)
+                            .matchedGeometryEffect(id: path, in: mediaNamespace)
                     } else {
                         CachedImage(path: path)
                             .scaledToFill()
                             .clipped()
+                            .matchedGeometryEffect(id: path, in: mediaNamespace)
                     }
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: 280)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                        selectedMediaIndex = idx
+                    }
+                }
             }
         }
         .tabViewStyle(.page)
