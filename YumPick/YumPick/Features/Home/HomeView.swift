@@ -27,7 +27,6 @@ struct HomeView: View {
                             categoryFilterSection
                             popularStoresSection
                             bannerSection
-                                .padding(.top, 24)
                             pickupStoresSection(scrollProxy: scrollProxy)
                         }
                     }
@@ -37,7 +36,7 @@ struct HomeView: View {
                                 armNearbyPagination()
                             }
                     )
-                    .background(YPColor.backgroundPrimary)
+                    .background(YPColor.backgroundBrandSubtle)
                 }
             }
         }
@@ -61,10 +60,10 @@ struct HomeView: View {
             searchBarSection
             popularSearchesSection
         }
-        .padding(.horizontal, 20)
         .padding(.top, 18)
         .padding(.bottom, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
         .background(YPColor.backgroundBrandSubtle)
     }
 
@@ -215,7 +214,8 @@ struct HomeView: View {
                 .padding(.horizontal, 20)
             }
         }
-        .padding(.bottom, 2)
+        .padding(.bottom, 24)
+        .background(YPColor.backgroundPrimary)
     }
 
     // MARK: - Banner
@@ -267,6 +267,7 @@ struct HomeView: View {
 
             pickupStoreList
         }
+        .background(YPColor.backgroundPrimary)
     }
 
     private func sortButton(scrollProxy: ScrollViewProxy) -> some View {
@@ -366,6 +367,8 @@ struct HomeView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 18)
             }
+
+            Color.clear.frame(height: 100)
         }
     }
 
