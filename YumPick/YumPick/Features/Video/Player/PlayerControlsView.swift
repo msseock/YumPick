@@ -62,11 +62,6 @@ struct PlayerControlsView: View {
                 startPoint: .top,
                 endPoint: .bottom
             ))
-
-            if case .buffering = viewModel.state {
-                ProgressView()
-                    .tint(YPColor.gray0)
-            }
         }
     }
 
