@@ -134,20 +134,31 @@ extension HomeBannerWebView {
         }
 
         private func sendAccessTokenToWeb() {
-            guard let accessToken = accessTokenProvider() else {
-                onAccessTokenUnavailable()
-                return
-            }
+            Task {
+                do {
+                    try await NetworkManager.shared.refreshAuthorization()
+                } catch {
+                    await MainActor.run { onAccessTokenUnavailable() }
+                    return
+                }
 
-            guard
-                let tokenData = try? JSONEncoder().encode(accessToken),
-                let tokenLiteral = String(data: tokenData, encoding: .utf8)
-            else {
-                onAccessTokenUnavailable()
-                return
-            }
+                guard let accessToken = accessTokenProvider() else {
+                    await MainActor.run { onAccessTokenUnavailable() }
+                    return
+                }
 
-            webView?.evaluateJavaScript("requestAttendance(\(tokenLiteral))")
+                guard
+                    let tokenData = try? JSONEncoder().encode(accessToken),
+                    let tokenLiteral = String(data: tokenData, encoding: .utf8)
+                else {
+                    await MainActor.run { onAccessTokenUnavailable() }
+                    return
+                }
+
+                await MainActor.run {
+                    webView?.evaluateJavaScript("requestAttendance(\(tokenLiteral))")
+                }
+            }
         }
 
         private func attendanceCount(from body: Any) -> Int? {
