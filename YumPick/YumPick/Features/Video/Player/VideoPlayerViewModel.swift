@@ -23,6 +23,7 @@ final class VideoPlayerViewModel {
     var duration: Double = 0
     var bufferedTime: Double = 0
     var isMuted: Bool = false
+    var isPlaying: Bool = false
     var isSeeking: Bool = false
 
     private var statusObservation: NSKeyValueObservation?
@@ -60,6 +61,7 @@ final class VideoPlayerViewModel {
         currentTime = 0
         duration = 0
         bufferedTime = 0
+        isPlaying = autoPlay
 
         let item = AVPlayerItem(asset: makeAsset(url: url))
         observeItem(item)
@@ -84,20 +86,23 @@ final class VideoPlayerViewModel {
         currentTime = 0
         duration = 0
         bufferedTime = 0
+        isPlaying = false
     }
 
     // MARK: - Playback control
 
     func play() {
+        isPlaying = true
         player.play()
     }
 
     func pause() {
+        isPlaying = false
         player.pause()
     }
 
     func togglePlay() {
-        if case .playing = state {
+        if isPlaying {
             pause()
         } else {
             play()
@@ -210,8 +215,10 @@ final class VideoPlayerViewModel {
                 guard let self else { return }
                 switch player.timeControlStatus {
                 case .playing:
+                    self.isPlaying = true
                     self.state = .playing
                 case .paused:
+                    self.isPlaying = false
                     if case .ended = self.state { return }
                     if case .failed = self.state { return }
                     if case .buffering = self.state { return }
@@ -247,6 +254,7 @@ final class VideoPlayerViewModel {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
+                self?.isPlaying = false
                 self?.state = .ended
             }
         }
@@ -264,6 +272,7 @@ final class VideoPlayerViewModel {
             print("⚠️ AVPlayer Error Log: \(message)")
             #endif
             Task { @MainActor in
+                self.isPlaying = false
                 self.state = .failed(message)
             }
         }
