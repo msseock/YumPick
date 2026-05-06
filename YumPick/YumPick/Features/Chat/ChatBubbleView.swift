@@ -4,7 +4,12 @@ struct ChatBubbleView: View {
     let message: ChatMessage
     let isMine: Bool
     let status: ChatMessageStatus
+    var namespace: Namespace.ID
     let onRetry: () -> Void
+    var onImageTapped: (Int) -> Void = { _ in }
+
+    private let gridWidth: CGFloat = 224
+    private let gap: CGFloat = 4
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 8) {
@@ -34,10 +39,13 @@ struct ChatBubbleView: View {
                         .opacity(status == .sending ? 0.6 : 1.0)
                 }
 
-                ForEach(message.files, id: \.self) { path in
-                    CachedImage(path: path)
-                        .frame(width: 180, height: 180)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                if !message.files.isEmpty {
+                    imageGrid(files: message.files)
+                        .overlay(alignment: .topTrailing) {
+                            if message.files.count > 1 {
+                                countBadge(message.files.count)
+                            }
+                        }
                         .opacity(status == .sending ? 0.6 : 1.0)
                 }
 
@@ -57,6 +65,90 @@ struct ChatBubbleView: View {
             if !isMine { Spacer(minLength: 48) }
         }
     }
+
+    // MARK: - Image Grid
+
+    @ViewBuilder
+    private func imageGrid(files: [String]) -> some View {
+        let half = (gridWidth - gap) / 2
+        let third = (gridWidth - gap * 2) / 3
+
+        switch files.count {
+        case 1:
+            cell(files[0], idx: 0, w: gridWidth, h: 200)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+
+        case 2:
+            HStack(spacing: gap) {
+                cell(files[0], idx: 0, w: half, h: 160)
+                cell(files[1], idx: 1, w: half, h: 160)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+
+        case 3:
+            HStack(alignment: .top, spacing: gap) {
+                cell(files[0], idx: 0, w: half + 36, h: 200)
+                VStack(spacing: gap) {
+                    cell(files[1], idx: 1, w: half - 36, h: 98)
+                    cell(files[2], idx: 2, w: half - 36, h: 98)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+
+        case 4:
+            VStack(spacing: gap) {
+                HStack(spacing: gap) {
+                    cell(files[0], idx: 0, w: half, h: half)
+                    cell(files[1], idx: 1, w: half, h: half)
+                }
+                HStack(spacing: gap) {
+                    cell(files[2], idx: 2, w: half, h: half)
+                    cell(files[3], idx: 3, w: half, h: half)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+
+        case 5:
+            VStack(spacing: gap) {
+                HStack(spacing: gap) {
+                    cell(files[0], idx: 0, w: half, h: half)
+                    cell(files[1], idx: 1, w: half, h: half)
+                }
+                HStack(spacing: gap) {
+                    cell(files[2], idx: 2, w: third, h: third)
+                    cell(files[3], idx: 3, w: third, h: third)
+                    cell(files[4], idx: 4, w: third, h: third)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+
+        default:
+            EmptyView()
+        }
+    }
+
+    private func cell(_ path: String, idx: Int, w: CGFloat, h: CGFloat) -> some View {
+        CachedImage(path: path)
+            .scaledToFill()
+            .frame(width: w, height: h)
+            .clipped()
+            .matchedGeometryEffect(id: path, in: namespace)
+            .contentShape(Rectangle())
+            .onTapGesture { onImageTapped(idx) }
+    }
+
+    private func countBadge(_ count: Int) -> some View {
+        Label("\(count)", systemImage: "photo.on.rectangle")
+            .ypFont(YPFont.caption2)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(Color.black.opacity(0.5))
+            .clipShape(Capsule())
+            .padding(6)
+    }
+
+    // MARK: - Helpers
 
     private var bubbleBackground: Color {
         isMine ? YPColor.actionPrimary : YPColor.backgroundSecondary
@@ -86,7 +178,8 @@ struct ChatBubbleView: View {
                 files: []
             ),
             isMine: false,
-            status: .sent
+            status: .sent,
+            namespace: Namespace().wrappedValue
         ) {}
 
         ChatBubbleView(
@@ -100,21 +193,8 @@ struct ChatBubbleView: View {
                 files: []
             ),
             isMine: true,
-            status: .sending
-        ) {}
-
-        ChatBubbleView(
-            message: ChatMessage(
-                chatID: "preview-3",
-                roomID: "room-preview",
-                content: "사진도 같이 보낼게요.",
-                createdAt: DateFormatManager.shared.chatISOString(from: Date()),
-                updatedAt: DateFormatManager.shared.chatISOString(from: Date()),
-                sender: ChatSender(userID: "me", nick: "나", profileImage: nil),
-                files: []
-            ),
-            isMine: true,
-            status: .failed
+            status: .sending,
+            namespace: Namespace().wrappedValue
         ) {}
     }
     .padding()
