@@ -115,9 +115,18 @@ final class VideoPlayerViewModel {
     }
 
     func seek(to seconds: Double) async {
-        guard duration > 0 else { return }
+        await seek(to: seconds, constrainedToKnownDuration: true)
+    }
+
+    private func seek(to seconds: Double, constrainedToKnownDuration: Bool) async {
+        if constrainedToKnownDuration, duration <= 0 { return }
         isSeeking = true
-        let target = max(0, min(seconds, duration))
+        let target: Double
+        if constrainedToKnownDuration, duration > 0 {
+            target = max(0, min(seconds, duration))
+        } else {
+            target = max(0, seconds)
+        }
         let time = CMTime(seconds: target, preferredTimescale: 600)
         await player.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero)
         currentTime = target
@@ -132,11 +141,10 @@ final class VideoPlayerViewModel {
     /// 동일 비디오의 다른 화질 URL로 교체. 현재 위치를 유지한다.
     func switchSource(url: URL) async {
         let resumeAt = currentTime
-        let wasPlaying: Bool
-        if case .playing = state { wasPlaying = true } else { wasPlaying = false }
+        let shouldResumePlayback = wantsPlayback || player.rate > 0
         load(url: url, autoPlay: false)
-        await seek(to: resumeAt)
-        if wasPlaying { play() }
+        await seek(to: resumeAt, constrainedToKnownDuration: false)
+        if shouldResumePlayback { play() }
     }
 
     // MARK: - Observation setup
