@@ -73,7 +73,22 @@ final class VideoClient: VideoClientProtocol {
     }
 
     func fetchStream(videoId: String) async throws -> StreamInfo {
-        try await NetworkManager.shared.request(VideoEndpoint.stream(videoId: videoId))
+        #if DEBUG
+        print("🌐 [VideoClient] GET /v1/videos/\(videoId)/stream 호출")
+        #endif
+        do {
+            let info: StreamInfo = try await NetworkManager.shared
+                .request(VideoEndpoint.stream(videoId: videoId))
+            #if DEBUG
+            print("🌐 [VideoClient] 응답 OK. stream_url=\(info.stream_url.prefix(120))…")
+            #endif
+            return info
+        } catch {
+            #if DEBUG
+            print("🌐 [VideoClient] 응답 실패: \(error)")
+            #endif
+            throw error
+        }
     }
 
     func toggleLike(videoId: String, likeStatus: Bool) async throws -> Bool {

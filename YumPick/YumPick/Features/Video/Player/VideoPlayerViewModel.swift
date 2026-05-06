@@ -51,6 +51,9 @@ final class VideoPlayerViewModel {
     // MARK: - Loading
 
     func load(url: URL, autoPlay: Bool = true) {
+        #if DEBUG
+        print("▶️ [Player] load url=\(url.absoluteString) autoPlay=\(autoPlay)")
+        #endif
         configureAudioSessionForPlayback()
         teardownItem()
         state = .loading
@@ -69,6 +72,9 @@ final class VideoPlayerViewModel {
         if autoPlay {
             player.play()
         }
+        #if DEBUG
+        print("▶️ [Player] replaceCurrentItem 완료, autoPlay 호출=\(autoPlay)")
+        #endif
     }
 
     func unload() {
@@ -132,10 +138,23 @@ final class VideoPlayerViewModel {
                 switch item.status {
                 case .readyToPlay:
                     self.duration = item.duration.seconds.isFinite ? item.duration.seconds : 0
+                    #if DEBUG
+                    print("✅ [Player] status=readyToPlay duration=\(self.duration)")
+                    #endif
                     if case .loading = self.state { self.state = .ready }
                 case .failed:
-                    self.state = .failed(self.playbackErrorMessage(for: item))
+                    let message = self.playbackErrorMessage(for: item)
+                    #if DEBUG
+                    print("❌ [Player] status=failed message=\(message)")
+                    if let err = item.error as NSError? {
+                        print("   • domain=\(err.domain) code=\(err.code) userInfo=\(err.userInfo)")
+                    }
+                    #endif
+                    self.state = .failed(message)
                 case .unknown:
+                    #if DEBUG
+                    print("⏳ [Player] status=unknown")
+                    #endif
                     break
                 @unknown default:
                     break
@@ -147,6 +166,9 @@ final class VideoPlayerViewModel {
             Task { @MainActor in
                 guard let self else { return }
                 if item.isPlaybackBufferEmpty {
+                    #if DEBUG
+                    print("🌀 [Player] playbackBufferEmpty=true → buffering")
+                    #endif
                     self.state = .buffering
                 }
             }
@@ -156,6 +178,9 @@ final class VideoPlayerViewModel {
             Task { @MainActor in
                 guard let self else { return }
                 if item.isPlaybackLikelyToKeepUp, case .buffering = self.state {
+                    #if DEBUG
+                    print("🌀 [Player] likelyToKeepUp=true → buffering 해제")
+                    #endif
                     self.state = self.player.timeControlStatus == .playing ? .playing : .paused
                 }
             }
@@ -235,6 +260,9 @@ final class VideoPlayerViewModel {
         ) { [weak self, weak item] _ in
             guard let self, let item else { return }
             let message = self.playbackErrorMessage(for: item)
+            #if DEBUG
+            print("⚠️ AVPlayer Error Log: \(message)")
+            #endif
             Task { @MainActor in
                 self.state = .failed(message)
             }

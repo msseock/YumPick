@@ -78,20 +78,38 @@ final class VideoDetailViewModel {
 
     func loadStream() async {
         loadState = .loading
+        #if DEBUG
+        print("🎬 [VideoDetail] loadStream 시작 video_id=\(video.video_id)")
+        #endif
         do {
             let info = try await client.fetchStream(videoId: video.video_id)
+            #if DEBUG
+            print("🎬 [VideoDetail] fetchStream 응답:")
+            print("   • stream_url: \(info.stream_url)")
+            print("   • qualities: \(info.qualities.map { "\($0.quality) → \($0.url.prefix(80))..." })")
+            print("   • subtitles: \(info.subtitles.map { "\($0.language)(\($0.name), default=\($0.is_default))" })")
+            #endif
             streamInfo = info
             selectedQuality = nil
             hasInitiallyLoaded = true
             hasRecoveredFromExpiry = false
             guard let url = resolveMediaURL(from: info.stream_url) else {
+                #if DEBUG
+                print("❌ [VideoDetail] resolveMediaURL 실패. raw=\(info.stream_url)")
+                #endif
                 loadState = .failed("스트리밍 URL이 올바르지 않습니다")
                 return
             }
+            #if DEBUG
+            print("🎬 [VideoDetail] AVPlayer에 전달할 URL: \(url.absoluteString)")
+            #endif
             player.load(url: url, autoPlay: true)
             loadState = .ready
             loadDefaultSubtitleIfNeeded(from: info)
         } catch {
+            #if DEBUG
+            print("❌ [VideoDetail] fetchStream 실패: \(error)")
+            #endif
             loadState = .failed(error.localizedDescription)
         }
     }
