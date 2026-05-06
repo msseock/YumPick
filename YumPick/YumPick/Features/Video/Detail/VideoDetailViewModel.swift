@@ -17,12 +17,16 @@ final class VideoDetailViewModel {
     var loadState: LoadState = .idle
     var streamInfo: StreamInfo? = nil
     var selectedQuality: String? = nil
+    var subtitleCues: [SubtitleCue] = []
+    var selectedSubtitleLanguage: String? = nil
+    var isSubtitleEnabled: Bool = true
 
     private let client: VideoClientProtocol
     private var hasInitiallyLoaded = false
     private var pathMonitor: NWPathMonitor?
     private var lastKnownPath: NWPath.Status = .satisfied
     private var hasRecoveredFromExpiry = false
+    private var subtitleLoadTask: Task<Void, Never>? = nil
 
     init(
         video: Video,
@@ -36,6 +40,16 @@ final class VideoDetailViewModel {
 
     var availableQualities: [String] {
         streamInfo?.qualities.map { $0.quality } ?? []
+    }
+
+    var availableSubtitles: [StreamInfo.Subtitle] {
+        streamInfo?.subtitles ?? []
+    }
+
+    var currentSubtitleText: String? {
+        guard isSubtitleEnabled, !subtitleCues.isEmpty else { return nil }
+        let t = player.currentTime
+        return subtitleCues.first(where: { $0.start <= t && t <= $0.end })?.text
     }
 
     // MARK: - Lifecycle
@@ -67,6 +81,7 @@ final class VideoDetailViewModel {
             }
             player.load(url: url, autoPlay: true)
             loadState = .ready
+            loadDefaultSubtitleIfNeeded(from: info)
         } catch {
             loadState = .failed(error.localizedDescription)
         }
@@ -113,6 +128,55 @@ final class VideoDetailViewModel {
         }
         guard let url = URL(string: urlString) else { return }
         await player.switchSource(url: url)
+    }
+
+    // MARK: - Subtitles
+
+    private func loadDefaultSubtitleIfNeeded(from info: StreamInfo) {
+        guard !info.subtitles.isEmpty else {
+            subtitleCues = []
+            selectedSubtitleLanguage = nil
+            return
+        }
+        let preferred = info.subtitles.first(where: { $0.is_default }) ?? info.subtitles.first
+        guard let preferred else { return }
+        Task { await selectSubtitle(language: preferred.language) }
+    }
+
+    func selectSubtitle(language: String?) async {
+        selectedSubtitleLanguage = language
+        subtitleLoadTask?.cancel()
+        guard let language, let subtitle = streamInfo?.subtitles.first(where: { $0.language == language }) else {
+            subtitleCues = []
+            return
+        }
+        guard let url = URL(string: subtitle.url) else {
+            subtitleCues = []
+            return
+        }
+        let task = Task<Void, Never> { [weak self] in
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                guard !Task.isCancelled else { return }
+                let text = String(data: data, encoding: .utf8) ?? ""
+                let cues = WebVTTParser.parse(text)
+                await MainActor.run {
+                    guard let self else { return }
+                    self.subtitleCues = cues
+                }
+            } catch {
+                // 자막 다운로드 실패는 무시 (재생은 계속)
+                await MainActor.run {
+                    guard let self else { return }
+                    self.subtitleCues = []
+                }
+            }
+        }
+        subtitleLoadTask = task
+    }
+
+    func toggleSubtitle() {
+        isSubtitleEnabled.toggle()
     }
 
     // MARK: - Network

@@ -25,6 +25,9 @@ struct VideoDetailView: View {
                         Label("\(viewModel.video.view_count)", systemImage: "eye")
                         Label("\(viewModel.video.like_count)", systemImage: "heart")
                         Spacer()
+                        if !viewModel.availableSubtitles.isEmpty {
+                            subtitleMenu
+                        }
                         if !viewModel.availableQualities.isEmpty {
                             qualityMenu
                         }
@@ -88,6 +91,67 @@ struct VideoDetailView: View {
                     }
                 }
             }
+
+            if let text = viewModel.currentSubtitleText {
+                VStack {
+                    Spacer()
+                    Text(text)
+                        .font(YPFont.body2Bold)
+                        .foregroundStyle(YPColor.gray0)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(YPColor.gray100.opacity(0.6))
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        .padding(.bottom, showsControls ? 64 : 16)
+                        .padding(.horizontal, 16)
+                }
+                .allowsHitTesting(false)
+            }
+        }
+    }
+
+    private var subtitleMenu: some View {
+        Menu {
+            Button {
+                Task { await viewModel.selectSubtitle(language: nil) }
+            } label: {
+                if viewModel.selectedSubtitleLanguage == nil {
+                    Label("자막 없음", systemImage: "checkmark")
+                } else {
+                    Text("자막 없음")
+                }
+            }
+            ForEach(viewModel.availableSubtitles, id: \.language) { sub in
+                Button {
+                    Task { await viewModel.selectSubtitle(language: sub.language) }
+                } label: {
+                    if viewModel.selectedSubtitleLanguage == sub.language {
+                        Label(sub.name, systemImage: "checkmark")
+                    } else {
+                        Text(sub.name)
+                    }
+                }
+            }
+            Divider()
+            Button {
+                viewModel.toggleSubtitle()
+            } label: {
+                Text(viewModel.isSubtitleEnabled ? "자막 끄기" : "자막 켜기")
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "captions.bubble")
+                Text(viewModel.selectedSubtitleLanguage ?? "자막")
+            }
+            .font(YPFont.caption1)
+            .foregroundStyle(YPColor.textPrimary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(YPColor.gray30, lineWidth: 1)
+            )
         }
     }
 
