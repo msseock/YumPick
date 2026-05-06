@@ -64,6 +64,14 @@ struct ChatView: View {
                     }
                     .background(YPColor.backgroundPrimary)
                     .scrollDismissesKeyboard(.interactively)
+                    .onScrollGeometryChange(for: Bool.self) { geo in
+                        let distanceFromBottom = geo.contentSize.height
+                            - geo.contentOffset.y
+                            - geo.containerSize.height
+                        return distanceFromBottom < 200
+                    } action: { _, nearBottom in
+                        isAtBottom = nearBottom
+                    }
                     .onChange(of: viewModel.messages.last?.id) { _, id in
                         guard let id, isAtBottom || isMineLastMessage() else { return }
                         withAnimation { proxy.scrollTo(id, anchor: .bottom) }
@@ -71,6 +79,19 @@ struct ChatView: View {
                     .onAppear {
                         proxy.scrollTo("__bottom__", anchor: .bottom)
                     }
+                    .overlay(alignment: .bottomTrailing) {
+                        if !isAtBottom {
+                            ScrollToBottomButton {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                    proxy.scrollTo("__bottom__", anchor: .bottom)
+                                }
+                            }
+                            .padding(.trailing, 16)
+                            .padding(.bottom, 12)
+                            .transition(.scale(scale: 0.8).combined(with: .opacity))
+                        }
+                    }
+                    .animation(.easeInOut(duration: 0.2), value: isAtBottom)
                 }
 
                 if let error = viewModel.errorMessage {
@@ -176,7 +197,6 @@ struct ChatView: View {
                 isUploading = false
             }
             await viewModel.sendMessage(content: content, files: paths)
-            isAtBottom = true
         }
     }
 
@@ -281,6 +301,22 @@ struct ChatDateDivider: View {
                 Rectangle().frame(height: 1).foregroundStyle(YPColor.gray15)
             }
             .padding(.vertical, 8)
+        }
+    }
+}
+
+struct ScrollToBottomButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "chevron.down")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(YPColor.textSecondary)
+                .frame(width: 40, height: 40)
+                .background(YPColor.backgroundPrimary, in: Circle())
+                .overlay(Circle().stroke(YPColor.borderSubtle, lineWidth: 1))
+                .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
         }
     }
 }
