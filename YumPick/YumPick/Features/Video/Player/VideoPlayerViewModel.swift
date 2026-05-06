@@ -31,6 +31,7 @@ final class VideoPlayerViewModel {
     private var loadedRangesObservation: NSKeyValueObservation?
     private var timeControlObservation: NSKeyValueObservation?
     private var endObserver: NSObjectProtocol?
+    private var errorLogObserver: NSObjectProtocol?
     private var timeObserverToken: Any?
 
     // 정리는 명시적으로 `unload()` 호출로 수행. 화면 dismiss 시 View에서 호출.
@@ -57,11 +58,12 @@ final class VideoPlayerViewModel {
         duration = 0
         bufferedTime = 0
 
-        let item = AVPlayerItem(url: url)
+        let item = AVPlayerItem(asset: makeAsset(url: url))
         observeItem(item)
         player.replaceCurrentItem(with: item)
         addPeriodicTimeObserver()
         addEndObserver(for: item)
+        addErrorLogObserver(for: item)
         observeTimeControlStatus()
 
         if autoPlay {
@@ -132,8 +134,7 @@ final class VideoPlayerViewModel {
                     self.duration = item.duration.seconds.isFinite ? item.duration.seconds : 0
                     if case .loading = self.state { self.state = .ready }
                 case .failed:
-                    let message = item.error?.localizedDescription ?? "재생 실패"
-                    self.state = .failed(message)
+                    self.state = .failed(self.playbackErrorMessage(for: item))
                 case .unknown:
                     break
                 @unknown default:
@@ -170,6 +171,12 @@ final class VideoPlayerViewModel {
                 }
             }
         }
+    }
+
+    private func makeAsset(url: URL) -> AVURLAsset {
+        // 스트리밍 .m3u8 / .m4s 요청에는 Authorization은 불필요하지만 서버 공통 SeSACKey 헤더는 필요.
+        let headers: [String: String] = ["SeSACKey": SecretConstants.sesacKey]
+        return AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": headers])
     }
 
     private func observeTimeControlStatus() {
@@ -220,6 +227,34 @@ final class VideoPlayerViewModel {
         }
     }
 
+    private func addErrorLogObserver(for item: AVPlayerItem) {
+        errorLogObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemNewErrorLogEntry,
+            object: item,
+            queue: .main
+        ) { [weak self, weak item] _ in
+            guard let self, let item else { return }
+            let message = self.playbackErrorMessage(for: item)
+            Task { @MainActor in
+                self.state = .failed(message)
+            }
+        }
+    }
+
+    private func playbackErrorMessage(for item: AVPlayerItem) -> String {
+        let itemMessage = item.error?.localizedDescription
+        let eventMessage = item.errorLog()?.events.last.flatMap { event -> String? in
+            let status = event.errorStatusCode
+            let comment = event.errorComment ?? event.errorDomain
+            guard status != 0 || comment != nil else { return nil }
+            return [comment, status == 0 ? nil : "status \(status)"]
+                .compactMap { $0 }
+                .joined(separator: " / ")
+        }
+
+        return eventMessage ?? itemMessage ?? "재생 실패"
+    }
+
     private func teardownItem() {
         statusObservation?.invalidate()
         statusObservation = nil
@@ -239,6 +274,10 @@ final class VideoPlayerViewModel {
         if let endObserver {
             NotificationCenter.default.removeObserver(endObserver)
             self.endObserver = nil
+        }
+        if let errorLogObserver {
+            NotificationCenter.default.removeObserver(errorLogObserver)
+            self.errorLogObserver = nil
         }
     }
 }

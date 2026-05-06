@@ -81,10 +81,10 @@ final class VideoDetailViewModel {
         do {
             let info = try await client.fetchStream(videoId: video.video_id)
             streamInfo = info
-            selectedQuality = nil // auto by default (master playlist)
+            selectedQuality = nil
             hasInitiallyLoaded = true
             hasRecoveredFromExpiry = false
-            guard let url = URL(string: info.stream_url) else {
+            guard let url = resolveMediaURL(from: info.stream_url) else {
                 loadState = .failed("스트리밍 URL이 올바르지 않습니다")
                 return
             }
@@ -111,7 +111,7 @@ final class VideoDetailViewModel {
             } else {
                 urlString = info.stream_url
             }
-            guard let url = URL(string: urlString) else {
+            guard let url = resolveMediaURL(from: urlString) else {
                 loadState = .failed("스트리밍 URL이 올바르지 않습니다")
                 return
             }
@@ -135,7 +135,7 @@ final class VideoDetailViewModel {
         } else {
             urlString = info.stream_url
         }
-        guard let url = URL(string: urlString) else { return }
+        guard let url = resolveMediaURL(from: urlString) else { return }
         await player.switchSource(url: url)
     }
 
@@ -159,13 +159,13 @@ final class VideoDetailViewModel {
             subtitleCues = []
             return
         }
-        guard let url = URL(string: subtitle.url) else {
+        guard let url = resolveMediaURL(from: subtitle.url) else {
             subtitleCues = []
             return
         }
         let task = Task<Void, Never> { [weak self] in
             do {
-                let (data, _) = try await URLSession.shared.data(from: url)
+                let (data, _) = try await URLSession.shared.data(for: Self.makeAuthenticatedRequest(url: url))
                 guard !Task.isCancelled else { return }
                 let text = String(data: data, encoding: .utf8) ?? ""
                 let cues = WebVTTParser.parse(text)
@@ -243,5 +243,30 @@ final class VideoDetailViewModel {
     private func stopNetworkMonitor() {
         pathMonitor?.cancel()
         pathMonitor = nil
+    }
+
+    private func resolveMediaURL(from path: String) -> URL? {
+        let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        if let url = URL(string: trimmed), url.scheme != nil, url.host != nil {
+            return url
+        }
+
+        let base = SecretConstants.baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let normalized = trimmed.hasPrefix("/") ? trimmed : "/\(trimmed)"
+        // 서버는 응답에 `/v1` prefix를 빼고 보내므로 클라이언트가 붙여준다.
+        let apiPath = normalized.hasPrefix("/v1/") ? normalized : "/v1\(normalized)"
+
+        return URL(string: base + apiPath)
+    }
+
+    private static func makeAuthenticatedRequest(url: URL) -> URLRequest {
+        var request = URLRequest(url: url)
+        request.setValue(SecretConstants.sesacKey, forHTTPHeaderField: "SeSACKey")
+        if let accessToken = KeychainManager.shared.read(key: .accessToken) {
+            request.setValue(accessToken, forHTTPHeaderField: "Authorization")
+        }
+        return request
     }
 }

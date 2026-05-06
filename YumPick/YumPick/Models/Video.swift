@@ -14,6 +14,20 @@ struct Video: Codable, Identifiable, Hashable {
     let createdAt: String
 
     var id: String { video_id }
+
+    enum CodingKeys: String, CodingKey {
+        case video_id = "id"
+        case file_name
+        case title
+        case description
+        case duration
+        case thumbnail_url
+        case available_qualities
+        case view_count
+        case like_count
+        case is_liked
+        case createdAt
+    }
 }
 
 struct VideoPage: Hashable {
