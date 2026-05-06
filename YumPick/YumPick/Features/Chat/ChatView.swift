@@ -68,7 +68,7 @@ struct ChatView: View {
                 if isUploading {
                     HStack(spacing: 6) {
                         ProgressView().scaleEffect(0.8)
-                        Text("이미지 업로드 중...")
+                        Text("파일 업로드 중...")
                             .ypFont(YPFont.caption1)
                             .foregroundStyle(YPColor.textSecondary)
                     }
@@ -143,14 +143,18 @@ struct ChatView: View {
             MultipartData(
                 name: "files",
                 fileName: asset.fileName,
-                mimeType: "image/jpeg",
+                mimeType: asset.mimeType,
                 data: asset.data
             )
         }
         do {
-            return try await ChatClient().uploadFiles(roomID: viewModel.currentRoomID, parts: parts)
+            let paths = try await ChatClient().uploadFiles(roomID: viewModel.currentRoomID, parts: parts)
+            for (asset, path) in zip(assets, paths) where asset.kind == .pdf {
+                ChatFileNameCache.shared.set(path: path, originalName: asset.fileName)
+            }
+            return paths
         } catch {
-            await MainActor.run { viewModel.errorMessage = "이미지 업로드에 실패했습니다." }
+            await MainActor.run { viewModel.errorMessage = "파일 업로드에 실패했습니다." }
             return []
         }
     }
