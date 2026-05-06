@@ -2,12 +2,25 @@ import SwiftUI
 
 struct PlayerControlsView: View {
     @Bindable var viewModel: VideoPlayerViewModel
+    let isFullscreen: Bool
+    let onToggleFullscreen: () -> Void
+
     @State private var isScrubbing: Bool = false
     @State private var scrubValue: Double = 0
 
+    init(
+        viewModel: VideoPlayerViewModel,
+        isFullscreen: Bool = false,
+        onToggleFullscreen: @escaping () -> Void = {}
+    ) {
+        self.viewModel = viewModel
+        self.isFullscreen = isFullscreen
+        self.onToggleFullscreen = onToggleFullscreen
+    }
+
     var body: some View {
         VStack(spacing: 8) {
-            HStack(spacing: 16) {
+            HStack(spacing: 14) {
                 Button {
                     viewModel.togglePlay()
                 } label: {
@@ -33,6 +46,14 @@ struct PlayerControlsView: View {
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(YPColor.gray0)
                 }
+
+                Button {
+                    onToggleFullscreen()
+                } label: {
+                    Image(systemName: isFullscreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(YPColor.gray0)
+                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
@@ -50,11 +71,10 @@ struct PlayerControlsView: View {
     }
 
     private var playPauseIcon: String {
-        switch viewModel.state {
-        case .playing: return "pause.fill"
-        case .ended: return "arrow.counterclockwise"
-        default: return "play.fill"
+        if case .ended = viewModel.state {
+            return "arrow.counterclockwise"
         }
+        return viewModel.isPlaying ? "pause.fill" : "play.fill"
     }
 
     private var displayedTime: Double {
