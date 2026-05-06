@@ -7,6 +7,7 @@ struct ChatBubbleView: View {
     var namespace: Namespace.ID
     let onRetry: () -> Void
     var onImageTapped: (Int) -> Void = { _ in }
+    var onPDFTapped: (String) -> Void = { _ in }
 
     private let gridWidth: CGFloat = 224
     private let gap: CGFloat = 4
@@ -40,13 +41,22 @@ struct ChatBubbleView: View {
                 }
 
                 if !message.files.isEmpty {
-                    imageGrid(files: message.files)
-                        .overlay(alignment: .topTrailing) {
-                            if message.files.count > 1 {
-                                countBadge(message.files.count)
-                            }
+                    let split = message.files.splitMediaAndPDF()
+                    if !split.pdfs.isEmpty {
+                        ForEach(split.pdfs, id: \.self) { path in
+                            ChatPDFCard(path: path) { onPDFTapped(path) }
+                                .opacity(status == .sending ? 0.6 : 1.0)
                         }
-                        .opacity(status == .sending ? 0.6 : 1.0)
+                    }
+                    if !split.media.isEmpty {
+                        imageGrid(files: split.media)
+                            .overlay(alignment: .topTrailing) {
+                                if split.media.count > 1 {
+                                    countBadge(split.media.count)
+                                }
+                            }
+                            .opacity(status == .sending ? 0.6 : 1.0)
+                    }
                 }
 
                 if status == .failed {

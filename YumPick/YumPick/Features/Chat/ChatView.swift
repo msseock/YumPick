@@ -9,6 +9,7 @@ struct ChatView: View {
     @Namespace private var mediaNamespace
     @State private var lightboxFiles: [String] = []
     @State private var lightboxIndex: Int? = nil
+    @State private var pdfViewerPath: String? = nil
     @Environment(\.scenePhase) private var scenePhase
 
     private var isLightboxActive: Bool { lightboxIndex != nil }
@@ -34,10 +35,14 @@ struct ChatView: View {
                                     namespace: mediaNamespace,
                                     onRetry: { Task { await viewModel.retrySend(clientID: message.chatID) } },
                                     onImageTapped: { index in
+                                        let mediaFiles = message.files.splitMediaAndPDF().media
                                         withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
-                                            lightboxFiles = message.files
+                                            lightboxFiles = mediaFiles
                                             lightboxIndex = index
                                         }
+                                    },
+                                    onPDFTapped: { path in
+                                        pdfViewerPath = path
                                     }
                                 )
                                 .id(message.id)
@@ -99,6 +104,13 @@ struct ChatView: View {
             }
         }
         .toolbar(isLightboxActive ? .hidden : .visible, for: .navigationBar)
+        .fullScreenCover(
+            isPresented: Binding(get: { pdfViewerPath != nil }, set: { if !$0 { pdfViewerPath = nil } })
+        ) {
+            if let path = pdfViewerPath {
+                PDFViewerView(path: path) { pdfViewerPath = nil }
+            }
+        }
         .task {
             ChatPushHandler.shared.currentOpenRoomID = viewModel.currentRoomID
             viewModel.onAppear()
