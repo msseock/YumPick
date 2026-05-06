@@ -10,6 +10,7 @@ struct ChatView: View {
     @State private var lightboxFiles: [String] = []
     @State private var lightboxIndex: Int? = nil
     @State private var pdfViewerPath: String? = nil
+    @State private var deletionConfirmation: ChatMessageDeletionConfirmation?
     @Environment(\.scenePhase) private var scenePhase
 
     private var isLightboxActive: Bool { lightboxIndex != nil }
@@ -34,6 +35,12 @@ struct ChatView: View {
                                     status: viewModel.status(of: message),
                                     namespace: mediaNamespace,
                                     onRetry: { Task { await viewModel.retrySend(clientID: message.chatID) } },
+                                    onDelete: {
+                                        deletionConfirmation = .deleteLocal(message)
+                                    },
+                                    onCancelFailedSend: {
+                                        deletionConfirmation = .cancelFailedSend(message)
+                                    },
                                     onImageTapped: { index in
                                         let mediaFiles = message.files.splitMediaAndPDF().media
                                         withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
@@ -104,6 +111,29 @@ struct ChatView: View {
             }
         }
         .toolbar(isLightboxActive ? .hidden : .visible, for: .navigationBar)
+        .alert(
+            deletionConfirmation?.title ?? "",
+            isPresented: Binding(
+                get: { deletionConfirmation != nil },
+                set: { if !$0 { deletionConfirmation = nil } }
+            ),
+            presenting: deletionConfirmation
+        ) { confirmation in
+            Button(confirmation.confirmTitle, role: .destructive) {
+                switch confirmation.kind {
+                case .deleteLocal:
+                    viewModel.deleteLocalMessage(confirmation.message)
+                case .cancelFailedSend:
+                    viewModel.cancelFailedSend(clientID: confirmation.message.chatID)
+                }
+                deletionConfirmation = nil
+            }
+            Button("취소", role: .cancel) {
+                deletionConfirmation = nil
+            }
+        } message: { confirmation in
+            Text(confirmation.messageText)
+        }
         .fullScreenCover(
             isPresented: Binding(get: { pdfViewerPath != nil }, set: { if !$0 { pdfViewerPath = nil } })
         ) {
@@ -190,6 +220,52 @@ struct ChatView: View {
 }
 
 // MARK: - Supporting Views
+
+private struct ChatMessageDeletionConfirmation: Identifiable {
+    enum Kind {
+        case deleteLocal
+        case cancelFailedSend
+    }
+
+    let id = UUID()
+    let kind: Kind
+    let message: ChatMessage
+
+    static func deleteLocal(_ message: ChatMessage) -> ChatMessageDeletionConfirmation {
+        ChatMessageDeletionConfirmation(kind: .deleteLocal, message: message)
+    }
+
+    static func cancelFailedSend(_ message: ChatMessage) -> ChatMessageDeletionConfirmation {
+        ChatMessageDeletionConfirmation(kind: .cancelFailedSend, message: message)
+    }
+
+    var title: String {
+        switch kind {
+        case .deleteLocal:
+            return "메시지 삭제"
+        case .cancelFailedSend:
+            return "전송 취소"
+        }
+    }
+
+    var confirmTitle: String {
+        switch kind {
+        case .deleteLocal:
+            return "삭제"
+        case .cancelFailedSend:
+            return "전송 취소"
+        }
+    }
+
+    var messageText: String {
+        switch kind {
+        case .deleteLocal:
+            return "이 메시지는 서버에서 삭제되지 않고 이 기기에서만 안 보이게 삭제됩니다."
+        case .cancelFailedSend:
+            return "전송 실패한 메시지를 취소하고 이 기기에서 삭제합니다."
+        }
+    }
+}
 
 struct ChatDateDivider: View {
     let isoString: String

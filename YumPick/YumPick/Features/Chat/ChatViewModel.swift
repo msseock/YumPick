@@ -141,6 +141,29 @@ final class ChatViewModel {
         await sendMessage(content: target.content, files: target.files)
     }
 
+    func deleteLocalMessage(_ message: ChatMessage) {
+        do {
+            try repository.deleteMessage(chatID: message.chatID)
+            pendingClientIDs.remove(message.chatID)
+            failedClientIDs.remove(message.chatID)
+            messages.removeAll { $0.chatID == message.chatID }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func cancelFailedSend(clientID: String) {
+        guard failedClientIDs.contains(clientID) else { return }
+        do {
+            try repository.deletePendingOrFailed(clientID: clientID)
+            pendingClientIDs.remove(clientID)
+            failedClientIDs.remove(clientID)
+            messages.removeAll { $0.chatID == clientID }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     // MARK: - Helpers
 
     func isMine(_ message: ChatMessage) -> Bool {

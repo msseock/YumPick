@@ -6,6 +6,8 @@ struct ChatBubbleView: View {
     let status: ChatMessageStatus
     var namespace: Namespace.ID
     let onRetry: () -> Void
+    let onDelete: () -> Void
+    let onCancelFailedSend: () -> Void
     var onImageTapped: (Int) -> Void = { _ in }
     var onPDFTapped: (String) -> Void = { _ in }
 
@@ -71,6 +73,20 @@ struct ChatBubbleView: View {
                 timeLabel
             }
             .frame(maxWidth: 260, alignment: isMine ? .trailing : .leading)
+            .contextMenu {
+                if status == .failed {
+                    Button(action: onRetry) {
+                        Label("재전송", systemImage: "arrow.clockwise")
+                    }
+                    Button(role: .destructive, action: onCancelFailedSend) {
+                        Label("전송 취소", systemImage: "xmark.circle")
+                    }
+                } else if status == .sent {
+                    Button(role: .destructive, action: onDelete) {
+                        Label("삭제", systemImage: "trash")
+                    }
+                }
+            }
 
             if !isMine { Spacer(minLength: 48) }
         }
@@ -190,7 +206,7 @@ struct ChatBubbleView: View {
             isMine: false,
             status: .sent,
             namespace: Namespace().wrappedValue
-        ) {}
+        ) {} onDelete: {} onCancelFailedSend: {}
 
         ChatBubbleView(
             message: ChatMessage(
@@ -205,7 +221,7 @@ struct ChatBubbleView: View {
             isMine: true,
             status: .sending,
             namespace: Namespace().wrappedValue
-        ) {}
+        ) {} onDelete: {} onCancelFailedSend: {}
     }
     .padding()
     .background(YPColor.backgroundPrimary)

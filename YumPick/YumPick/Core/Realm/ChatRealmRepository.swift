@@ -5,6 +5,8 @@ protocol ChatRealmRepositoryProtocol {
     func savePending(_ message: ChatMessage, clientID: String) throws
     func markFailed(clientID: String) throws
     func replacePending(clientID: String, with message: ChatMessage) throws
+    func deleteMessage(chatID: String) throws
+    func deletePendingOrFailed(clientID: String) throws
     func saveAll(_ messages: [ChatMessage], isRoomOpen: Bool) throws
     func saveAllInitial(_ messages: [ChatMessage]) throws
 
@@ -62,6 +64,26 @@ final class ChatRealmRepository: ChatRealmRepositoryProtocol {
             let obj = message.toRealmObject(clientID: clientID, status: .sent)
             obj.isRead = true
             realm.add(obj, update: .modified)
+        }
+    }
+
+    func deleteMessage(chatID: String) throws {
+        let realm = try Realm(configuration: configuration)
+        guard let object = realm.object(ofType: ChatMessageObject.self, forPrimaryKey: chatID) else { return }
+        try realm.write {
+            realm.delete(object)
+        }
+    }
+
+    func deletePendingOrFailed(clientID: String) throws {
+        let realm = try Realm(configuration: configuration)
+        let sendingRaw = ChatMessageStatus.sending.rawValue
+        let failedRaw = ChatMessageStatus.failed.rawValue
+        guard let object = realm.objects(ChatMessageObject.self)
+            .first(where: { $0.clientID == clientID && ($0.status == sendingRaw || $0.status == failedRaw) })
+        else { return }
+        try realm.write {
+            realm.delete(object)
         }
     }
 
