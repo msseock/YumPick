@@ -20,6 +20,9 @@ final class VideoDetailViewModel {
     var subtitleCues: [SubtitleCue] = []
     var selectedSubtitleLanguage: String? = nil
     var isSubtitleEnabled: Bool = true
+    var isLiked: Bool
+    var likeCount: Int
+    private var isLikeRequestInFlight = false
 
     private let client: VideoClientProtocol
     private var hasInitiallyLoaded = false
@@ -36,6 +39,12 @@ final class VideoDetailViewModel {
         self.video = video
         self.client = client
         self.player = player ?? VideoPlayerViewModel()
+        let cached = VideoLikeStateStore.shared.state(
+            for: video.video_id,
+            fallback: .init(isLiked: video.is_liked, likeCount: video.like_count)
+        )
+        self.isLiked = cached.isLiked
+        self.likeCount = cached.likeCount
     }
 
     var availableQualities: [String] {
@@ -177,6 +186,35 @@ final class VideoDetailViewModel {
 
     func toggleSubtitle() {
         isSubtitleEnabled.toggle()
+    }
+
+    // MARK: - Like
+
+    func toggleLike() async {
+        guard !isLikeRequestInFlight else { return }
+        let previousLiked = isLiked
+        let previousCount = likeCount
+        let nextLiked = !previousLiked
+        let nextCount = max(0, previousCount + (nextLiked ? 1 : -1))
+
+        isLiked = nextLiked
+        likeCount = nextCount
+        VideoLikeStateStore.shared.update(videoId: video.video_id, isLiked: nextLiked, likeCount: nextCount)
+
+        isLikeRequestInFlight = true
+        defer { isLikeRequestInFlight = false }
+        do {
+            let serverStatus = try await client.toggleLike(videoId: video.video_id, likeStatus: nextLiked)
+            if serverStatus != nextLiked {
+                isLiked = serverStatus
+                likeCount = max(0, previousCount + (serverStatus ? 1 : -1))
+                VideoLikeStateStore.shared.update(videoId: video.video_id, isLiked: isLiked, likeCount: likeCount)
+            }
+        } catch {
+            isLiked = previousLiked
+            likeCount = previousCount
+            VideoLikeStateStore.shared.update(videoId: video.video_id, isLiked: previousLiked, likeCount: previousCount)
+        }
     }
 
     // MARK: - Network

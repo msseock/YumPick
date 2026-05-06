@@ -3,6 +3,13 @@ import SwiftUI
 struct VideoListCell: View {
     let video: Video
 
+    private var likeState: VideoLikeStateStore.State {
+        VideoLikeStateStore.shared.state(
+            for: video.video_id,
+            fallback: .init(isLiked: video.is_liked, likeCount: video.like_count)
+        )
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             CachedImage(path: video.thumbnail_url)
@@ -27,8 +34,9 @@ struct VideoListCell: View {
 
                 HStack(spacing: 8) {
                     Label("\(video.view_count)", systemImage: "eye")
-                    Label("\(video.like_count)", systemImage: video.is_liked ? "heart.fill" : "heart")
-                        .foregroundStyle(video.is_liked ? YPColor.actionAccent : YPColor.textSecondary)
+                    let state = likeState
+                    Label("\(state.likeCount)", systemImage: state.isLiked ? "heart.fill" : "heart")
+                        .foregroundStyle(state.isLiked ? YPColor.actionAccent : YPColor.textSecondary)
                 }
                 .font(YPFont.caption1)
                 .foregroundStyle(YPColor.textSecondary)

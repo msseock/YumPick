@@ -23,7 +23,13 @@ struct VideoDetailView: View {
 
                     HStack(spacing: 12) {
                         Label("\(viewModel.video.view_count)", systemImage: "eye")
-                        Label("\(viewModel.video.like_count)", systemImage: "heart")
+                        Button {
+                            Task { await viewModel.toggleLike() }
+                        } label: {
+                            Label("\(viewModel.likeCount)", systemImage: viewModel.isLiked ? "heart.fill" : "heart")
+                                .foregroundStyle(viewModel.isLiked ? YPColor.actionAccent : YPColor.textSecondary)
+                        }
+                        .buttonStyle(.plain)
                         Spacer()
                         if !viewModel.availableSubtitles.isEmpty {
                             subtitleMenu
