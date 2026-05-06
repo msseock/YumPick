@@ -34,6 +34,7 @@ final class VideoPlayerViewModel {
     private var endObserver: NSObjectProtocol?
     private var errorLogObserver: NSObjectProtocol?
     private var timeObserverToken: Any?
+    private var wantsPlayback = false
 
     // 정리는 명시적으로 `unload()` 호출로 수행. 화면 dismiss 시 View에서 호출.
 
@@ -61,6 +62,7 @@ final class VideoPlayerViewModel {
         currentTime = 0
         duration = 0
         bufferedTime = 0
+        wantsPlayback = autoPlay
         isPlaying = autoPlay
 
         let item = AVPlayerItem(asset: makeAsset(url: url))
@@ -86,17 +88,20 @@ final class VideoPlayerViewModel {
         currentTime = 0
         duration = 0
         bufferedTime = 0
+        wantsPlayback = false
         isPlaying = false
     }
 
     // MARK: - Playback control
 
     func play() {
+        wantsPlayback = true
         isPlaying = true
         player.play()
     }
 
     func pause() {
+        wantsPlayback = false
         isPlaying = false
         player.pause()
     }
@@ -218,10 +223,10 @@ final class VideoPlayerViewModel {
                     self.isPlaying = true
                     self.state = .playing
                 case .paused:
-                    self.isPlaying = false
                     if case .ended = self.state { return }
                     if case .failed = self.state { return }
                     if case .buffering = self.state { return }
+                    self.isPlaying = self.wantsPlayback
                     self.state = .paused
                 case .waitingToPlayAtSpecifiedRate:
                     self.state = .buffering
@@ -243,6 +248,12 @@ final class VideoPlayerViewModel {
             Task { @MainActor [weak self] in
                 guard let self, !self.isSeeking else { return }
                 self.currentTime = seconds
+                if self.wantsPlayback, self.player.rate > 0 {
+                    self.isPlaying = true
+                    if case .ended = self.state { return }
+                    if case .failed = self.state { return }
+                    self.state = .playing
+                }
             }
         }
     }
@@ -254,6 +265,7 @@ final class VideoPlayerViewModel {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
+                self?.wantsPlayback = false
                 self?.isPlaying = false
                 self?.state = .ended
             }
@@ -272,6 +284,7 @@ final class VideoPlayerViewModel {
             print("⚠️ AVPlayer Error Log: \(message)")
             #endif
             Task { @MainActor in
+                self.wantsPlayback = false
                 self.isPlaying = false
                 self.state = .failed(message)
             }

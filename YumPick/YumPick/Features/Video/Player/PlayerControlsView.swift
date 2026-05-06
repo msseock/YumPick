@@ -21,13 +21,7 @@ struct PlayerControlsView: View {
     var body: some View {
         VStack(spacing: 8) {
             HStack(spacing: 14) {
-                Button {
-                    viewModel.togglePlay()
-                } label: {
-                    Image(systemName: playPauseIcon)
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(YPColor.gray0)
-                }
+                primaryPlaybackControl
 
                 Text(formattedTime(displayedTime))
                     .font(YPFont.caption1.monospacedDigit())
@@ -62,6 +56,33 @@ struct PlayerControlsView: View {
                 startPoint: .top,
                 endPoint: .bottom
             ))
+        }
+    }
+
+    @ViewBuilder
+    private var primaryPlaybackControl: some View {
+        if showsInlinePlaybackProgress {
+            ProgressView()
+                .tint(YPColor.gray0)
+                .frame(width: 28, height: 28)
+        } else {
+            Button {
+                viewModel.togglePlay()
+            } label: {
+                Image(systemName: playPauseIcon)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(YPColor.gray0)
+                    .frame(width: 28, height: 28)
+            }
+        }
+    }
+
+    private var showsInlinePlaybackProgress: Bool {
+        switch viewModel.state {
+        case .loading, .buffering:
+            return true
+        default:
+            return false
         }
     }
 
