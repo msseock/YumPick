@@ -5,6 +5,7 @@ struct StoreDetailView: View {
     @State private var bannerPage = 0
     @State private var isSearchExpanded = false
     @State private var selectedCategory: String? = nil
+    @Environment(AppRouter.self) private var router
 
     init(storeId: String) {
         _viewModel = State(initialValue: StoreDetailViewModel(storeId: storeId))
@@ -109,6 +110,7 @@ struct StoreDetailView: View {
                 .font(YPFont.body3)
                 .foregroundStyle(YPColor.textSecondary)
             Button {
+                router.homePath.append(.reviewList(storeId: viewModel.storeId))
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "star.fill")
