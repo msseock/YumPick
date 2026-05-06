@@ -200,6 +200,15 @@ final class ChatViewModel {
                 self?.errorMessage = error.localizedDescription
             }
             .store(in: &cancellables)
+
+        outbox.sentMessagePublisher
+            .sink { [weak self] sent in
+                guard let self, sent.message.roomID == self.currentRoomID else { return }
+                self.pendingClientIDs.remove(sent.clientID)
+                self.failedClientIDs.remove(sent.clientID)
+                self.messages = self.replacePendingInDisplay(clientID: sent.clientID, with: sent.message)
+            }
+            .store(in: &cancellables)
     }
 
     private func loadInitialLocalMessages() {

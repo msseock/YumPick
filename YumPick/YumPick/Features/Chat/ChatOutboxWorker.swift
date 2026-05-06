@@ -1,10 +1,17 @@
+import Combine
 import Foundation
 import Network
 
 @MainActor
 final class ChatOutboxWorker {
+    struct SentMessage {
+        let clientID: String
+        let message: ChatMessage
+    }
+
     static let shared = ChatOutboxWorker()
 
+    private let sentMessageSubject = PassthroughSubject<SentMessage, Never>()
     private let monitor = NWPathMonitor()
     private let monitorQueue = DispatchQueue(label: "chat.outbox.monitor")
     private var isRunning = false
@@ -19,6 +26,10 @@ final class ChatOutboxWorker {
     ) {
         self.repository = repository
         self.client = client
+    }
+
+    var sentMessagePublisher: AnyPublisher<SentMessage, Never> {
+        sentMessageSubject.eraseToAnyPublisher()
     }
 
     func start() {
@@ -47,6 +58,7 @@ final class ChatOutboxWorker {
                         files: item.files
                     )
                     try repository.replacePending(clientID: item.clientID, with: sent)
+                    sentMessageSubject.send(SentMessage(clientID: item.clientID, message: sent))
                 } catch {
                     try? repository.markFailed(clientID: item.clientID)
                     break
