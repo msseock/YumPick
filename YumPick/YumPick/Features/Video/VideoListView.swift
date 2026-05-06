@@ -2,17 +2,18 @@ import SwiftUI
 
 struct VideoListView: View {
     @State private var viewModel = VideoListViewModel()
-    private let onVideoSelected: (Video) -> Void
-
-    init(onVideoSelected: @escaping (Video) -> Void = { _ in }) {
-        self.onVideoSelected = onVideoSelected
-    }
+    @State private var selectedVideo: Video?
 
     var body: some View {
         content
             .navigationTitle("비디오")
             .navigationBarTitleDisplayMode(.inline)
             .task { await viewModel.onAppear() }
+            .fullScreenCover(item: $selectedVideo) { video in
+                VideoDetailView(video: video) {
+                    selectedVideo = nil
+                }
+            }
     }
 
     @ViewBuilder
@@ -34,7 +35,7 @@ struct VideoListView: View {
         List {
             ForEach(viewModel.videos) { video in
                 Button {
-                    onVideoSelected(video)
+                    selectedVideo = video
                 } label: {
                     VideoListCell(video: video)
                 }
