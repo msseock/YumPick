@@ -9,7 +9,7 @@ struct ChatInputView: View {
 
     private var canSend: Bool {
         let hasText = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        return (hasText || !attachments.isEmpty) && !isSending
+        return hasText && !isSending
     }
 
     var body: some View {
