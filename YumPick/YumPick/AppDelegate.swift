@@ -68,4 +68,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         guard let fcmToken else { return }
         KeychainManager.shared.save(key: .fcmToken, value: fcmToken)
     }
+
+    func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        OrientationManager.shared.allowsLandscape ? .allButUpsideDown : .portrait
+    }
 }

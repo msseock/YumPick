@@ -55,6 +55,12 @@
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>주변 가게를 찾기 위해 위치 정보를 사용합니다.</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
