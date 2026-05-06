@@ -13,7 +13,7 @@ struct ChatBubbleView: View {
     private let gap: CGFloat = 4
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: 8) {
+        HStack(alignment: .top, spacing: 8) {
             if isMine { Spacer(minLength: 48) }
 
             if !isMine {
