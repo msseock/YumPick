@@ -1,29 +1,6 @@
 import PhotosUI
 import SwiftUI
 
-struct ChatAttachment: Identifiable {
-    let id = UUID()
-    let image: UIImage
-    let data: Data
-    let fileName: String
-}
-
-extension ChatAttachment {
-    static func preview(color: UIColor = .systemGreen, fileName: String = "preview.jpg") -> ChatAttachment {
-        let size = CGSize(width: 160, height: 160)
-        let image = UIGraphicsImageRenderer(size: size).image { context in
-            color.setFill()
-            context.fill(CGRect(origin: .zero, size: size))
-        }
-
-        return ChatAttachment(
-            image: image,
-            data: image.jpegData(compressionQuality: 0.8) ?? Data(),
-            fileName: fileName
-        )
-    }
-}
-
 struct ChatAttachmentPicker: UIViewControllerRepresentable {
     let maxCount: Int
     let onPick: ([ChatAttachment]) -> Void
@@ -87,30 +64,13 @@ struct ChatAttachmentPicker: UIViewControllerRepresentable {
 
             guard let finalData = data else { return nil }
             let fileName = "\(UUID().uuidString).jpg"
-            return ChatAttachment(image: resized, data: finalData, fileName: fileName)
-        }
-    }
-}
-
-struct ChatAttachmentThumbnail: View {
-    let attachment: ChatAttachment
-    let onRemove: () -> Void
-
-    var body: some View {
-        ZStack(alignment: .topTrailing) {
-            Image(uiImage: attachment.image)
-                .resizable()
-                .scaledToFill()
-                .frame(width: 72, height: 72)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-
-            Button(action: onRemove) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 18))
-                    .foregroundStyle(YPColor.textPrimary)
-                    .background(YPColor.backgroundPrimary.clipShape(Circle()))
-            }
-            .offset(x: 6, y: -6)
+            return ChatAttachment(
+                kind: .image,
+                data: finalData,
+                fileName: fileName,
+                mimeType: "image/jpeg",
+                thumbnail: resized
+            )
         }
     }
 }
@@ -127,13 +87,4 @@ private extension NSItemProvider {
             }
         }
     }
-}
-
-#Preview("ChatAttachmentThumbnail") {
-    HStack(spacing: 12) {
-        ChatAttachmentThumbnail(attachment: .preview(color: .systemGreen)) {}
-        ChatAttachmentThumbnail(attachment: .preview(color: .systemOrange)) {}
-    }
-    .padding()
-    .background(YPColor.backgroundPrimary)
 }
