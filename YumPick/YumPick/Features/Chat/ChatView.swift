@@ -6,73 +6,99 @@ struct ChatView: View {
     @State private var attachedAssets: [ChatAttachment] = []
     @State private var isAtBottom: Bool = true
     @State private var isUploading: Bool = false
+    @Namespace private var mediaNamespace
+    @State private var lightboxFiles: [String] = []
+    @State private var lightboxIndex: Int? = nil
     @Environment(\.scenePhase) private var scenePhase
+
+    private var isLightboxActive: Bool { lightboxIndex != nil }
 
     init(roomID: String) {
         _viewModel = State(initialValue: ChatViewModel(roomID: roomID))
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 8) {
-                        ForEach(Array(viewModel.messages.enumerated()), id: \.element.id) { index, message in
-                            if shouldShowDateDivider(at: index) {
-                                ChatDateDivider(isoString: message.createdAt)
+        ZStack {
+            VStack(spacing: 0) {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 8) {
+                            ForEach(Array(viewModel.messages.enumerated()), id: \.element.id) { index, message in
+                                if shouldShowDateDivider(at: index) {
+                                    ChatDateDivider(isoString: message.createdAt)
+                                }
+                                ChatBubbleView(
+                                    message: message,
+                                    isMine: viewModel.isMine(message),
+                                    status: viewModel.status(of: message),
+                                    namespace: mediaNamespace,
+                                    onRetry: { Task { await viewModel.retrySend(clientID: message.chatID) } },
+                                    onImageTapped: { index in
+                                        withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                                            lightboxFiles = message.files
+                                            lightboxIndex = index
+                                        }
+                                    }
+                                )
+                                .id(message.id)
+                                .onAppear {
+                                    viewModel.loadOlderMessagesIfNeeded(current: message)
+                                }
                             }
-                            ChatBubbleView(
-                                message: message,
-                                isMine: viewModel.isMine(message),
-                                status: viewModel.status(of: message),
-                                onRetry: { Task { await viewModel.retrySend(clientID: message.chatID) } }
-                            )
-                            .id(message.id)
-                            .onAppear {
-                                viewModel.loadOlderMessagesIfNeeded(current: message)
-                            }
+                            Color.clear.frame(height: 1).id("__bottom__")
                         }
-                        Color.clear.frame(height: 1).id("__bottom__")
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                    }
+                    .background(YPColor.backgroundPrimary)
+                    .scrollDismissesKeyboard(.interactively)
+                    .onChange(of: viewModel.messages.last?.id) { _, id in
+                        guard let id, isAtBottom || isMineLastMessage() else { return }
+                        withAnimation { proxy.scrollTo(id, anchor: .bottom) }
+                    }
+                    .onAppear {
+                        proxy.scrollTo("__bottom__", anchor: .bottom)
+                    }
+                }
+
+                if let error = viewModel.errorMessage {
+                    ChatErrorBanner(message: error) { viewModel.errorMessage = nil }
+                }
+
+                if isUploading {
+                    HStack(spacing: 6) {
+                        ProgressView().scaleEffect(0.8)
+                        Text("이미지 업로드 중...")
+                            .ypFont(YPFont.caption1)
+                            .foregroundStyle(YPColor.textSecondary)
                     }
                     .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
+                    .padding(.vertical, 6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(YPColor.backgroundSecondary)
                 }
-                .background(YPColor.backgroundPrimary)
-                .scrollDismissesKeyboard(.interactively)
-                .onChange(of: viewModel.messages.last?.id) { _, id in
-                    guard let id, isAtBottom || isMineLastMessage() else { return }
-                    withAnimation { proxy.scrollTo(id, anchor: .bottom) }
-                }
-                .onAppear {
-                    proxy.scrollTo("__bottom__", anchor: .bottom)
-                }
-            }
 
-            if let error = viewModel.errorMessage {
-                ChatErrorBanner(message: error) { viewModel.errorMessage = nil }
+                ChatInputView(
+                    text: $inputText,
+                    attachments: $attachedAssets,
+                    isSending: viewModel.isSending,
+                    onSend: send
+                )
             }
+            .background(YPColor.backgroundPrimary)
 
-            if isUploading {
-                HStack(spacing: 6) {
-                    ProgressView().scaleEffect(0.8)
-                    Text("이미지 업로드 중...")
-                        .ypFont(YPFont.caption1)
-                        .foregroundStyle(YPColor.textSecondary)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 6)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(YPColor.backgroundSecondary)
+            if isLightboxActive {
+                MediaLightboxView(
+                    files: lightboxFiles,
+                    selectedIndex: $lightboxIndex,
+                    namespace: mediaNamespace
+                )
+                .ignoresSafeArea()
+                .transition(.opacity)
+                .zIndex(10)
             }
-
-            ChatInputView(
-                text: $inputText,
-                attachments: $attachedAssets,
-                isSending: viewModel.isSending,
-                onSend: send
-            )
         }
-        .background(YPColor.backgroundPrimary)
+        .toolbar(isLightboxActive ? .hidden : .visible, for: .navigationBar)
         .task {
             ChatPushHandler.shared.currentOpenRoomID = viewModel.currentRoomID
             viewModel.onAppear()
