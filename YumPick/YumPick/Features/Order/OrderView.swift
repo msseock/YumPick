@@ -3,6 +3,7 @@ import SwiftUI
 struct OrderView: View {
     @State private var viewModel = OrderViewModel()
     @Environment(AppRouter.self) private var router
+    @State private var reviewTarget: Order? = nil
 
     var body: some View {
         Group {
@@ -24,7 +25,9 @@ struct OrderView: View {
                         .allowsHitTesting(!viewModel.isUpdatingStatus)
 
                         if viewModel.orders.count > 1 {
-                            PastOrderSection(orders: Array(viewModel.orders.dropFirst()))
+                            PastOrderSection(orders: Array(viewModel.orders.dropFirst())) { order in
+                                reviewTarget = order
+                            }
                         }
                     }
                 }
@@ -35,6 +38,24 @@ struct OrderView: View {
         }
         .task(id: router.orderReloadToken) {
             await viewModel.fetchOrders()
+        }
+        .sheet(item: $reviewTarget) { order in
+            reviewSheet(for: order)
+        }
+    }
+
+    @ViewBuilder
+    private func reviewSheet(for order: Order) -> some View {
+        if let storeId = order.store.id {
+            if let review = order.review {
+                WriteReviewView(mode: .edit(storeId: storeId, reviewId: review.id)) {
+                    Task { await viewModel.fetchOrders() }
+                }
+            } else {
+                WriteReviewView(mode: .create(storeId: storeId, orderCode: order.order_code)) {
+                    Task { await viewModel.fetchOrders() }
+                }
+            }
         }
     }
 }
@@ -159,6 +180,7 @@ private struct OrderMenuListCard: View {
 
 private struct PastOrderSection: View {
     let orders: [Order]
+    var onReviewTapped: (Order) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -178,7 +200,7 @@ private struct PastOrderSection: View {
                         totalPrice: Int(order.total_price),
                         reviewRating: order.review?.rating,
                         onDetailTapped: {},
-                        onReviewTapped: {}
+                        onReviewTapped: { onReviewTapped(order) }
                     )
                 }
             }

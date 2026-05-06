@@ -2,6 +2,7 @@ import SwiftUI
 
 enum HomePath: Hashable {
     case storeDetail(storeId: String)
+    case reviewList(storeId: String)
     case orderConfirm(selection: CheckoutSelection)
     case paymentComplete(orderCode: String, totalPrice: Int, impUid: String)
 }
@@ -17,6 +18,8 @@ struct HomeTabView: View {
                     switch destination {
                     case .storeDetail(let storeId):
                         StoreDetailView(storeId: storeId)
+                    case .reviewList(let storeId):
+                        ReviewListView(storeId: storeId)
                     case .orderConfirm(let selection):
                         OrderConfirmView(selection: selection) { orderCode, totalPrice, impUid in
                             path.append(.paymentComplete(
