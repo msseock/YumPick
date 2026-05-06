@@ -97,23 +97,3 @@ struct VideoListView: View {
     }
 }
 
-// MARK: - Placeholder Detail (Phase 4에서 구현)
-
-struct VideoDetailView: View {
-    let video: Video
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Text(video.title)
-                .font(YPFont.title1)
-                .foregroundStyle(YPColor.textPrimary)
-            Text("Phase 4 — 스트리밍 연결 예정")
-                .font(YPFont.body2)
-                .foregroundStyle(YPColor.textSecondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(YPColor.backgroundPrimary)
-        .navigationTitle(video.title)
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
