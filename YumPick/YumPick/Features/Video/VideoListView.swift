@@ -2,18 +2,17 @@ import SwiftUI
 
 struct VideoListView: View {
     @State private var viewModel = VideoListViewModel()
-    @State private var selectedVideo: Video? = nil
+    private let onVideoSelected: (Video) -> Void
+
+    init(onVideoSelected: @escaping (Video) -> Void = { _ in }) {
+        self.onVideoSelected = onVideoSelected
+    }
 
     var body: some View {
-        NavigationStack {
-            content
-                .navigationTitle("비디오")
-                .navigationBarTitleDisplayMode(.inline)
-                .navigationDestination(item: $selectedVideo) { video in
-                    VideoDetailView(video: video)
-                }
-        }
-        .task { await viewModel.onAppear() }
+        content
+            .navigationTitle("비디오")
+            .navigationBarTitleDisplayMode(.inline)
+            .task { await viewModel.onAppear() }
     }
 
     @ViewBuilder
@@ -35,7 +34,7 @@ struct VideoListView: View {
         List {
             ForEach(viewModel.videos) { video in
                 Button {
-                    selectedVideo = video
+                    onVideoSelected(video)
                 } label: {
                     VideoListCell(video: video)
                 }
@@ -96,4 +95,3 @@ struct VideoListView: View {
         .background(YPColor.backgroundPrimary)
     }
 }
-
