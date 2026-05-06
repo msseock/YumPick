@@ -35,9 +35,22 @@ final class VideoPlayerViewModel {
 
     // 정리는 명시적으로 `unload()` 호출로 수행. 화면 dismiss 시 View에서 호출.
 
+    /// PiP/백그라운드 재생을 위해 AVAudioSession을 `.playback` 카테고리로 활성화.
+    private func configureAudioSessionForPlayback() {
+        let session = AVAudioSession.sharedInstance()
+        if session.category == .playback { return }
+        do {
+            try session.setCategory(.playback, mode: .moviePlayback)
+            try session.setActive(true, options: [])
+        } catch {
+            // 오디오 세션 설정 실패는 치명적이지 않음. 재생은 시도.
+        }
+    }
+
     // MARK: - Loading
 
     func load(url: URL, autoPlay: Bool = true) {
+        configureAudioSessionForPlayback()
         teardownItem()
         state = .loading
         currentTime = 0
