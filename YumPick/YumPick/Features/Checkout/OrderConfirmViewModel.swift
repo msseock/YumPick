@@ -6,6 +6,7 @@ final class OrderConfirmViewModel {
     enum Phase {
         case idle
         case checkingStock
+        case stockCheckPassed
         case creatingOrder
         case paying
         case error
@@ -36,7 +37,7 @@ final class OrderConfirmViewModel {
 
     // MARK: - Actions
 
-    func startCheckout() async {
+    func validateStock() async {
         phase = .checkingStock
         errorMessage = nil
 
@@ -55,8 +56,19 @@ final class OrderConfirmViewModel {
                 return
             }
 
-            phase = .creatingOrder
+            phase = .stockCheckPassed
 
+        } catch {
+            errorMessage = error.localizedDescription
+            phase = .error
+        }
+    }
+
+    func createOrderAndPay() async {
+        phase = .creatingOrder
+        errorMessage = nil
+        
+        do {
             let request = OrderCreateRequest(
                 store_id: selection.storeId,
                 order_menu_list: selection.items.map {

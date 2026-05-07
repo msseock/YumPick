@@ -38,6 +38,7 @@ struct OrderConfirmView: View {
         .navigationTitle("주문 확인")
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: viewModel.phase) { _, phase in
+            if phase == .stockCheckPassed { Task { await viewModel.createOrderAndPay() } }
             if phase == .paying { showPayment = true }
             if phase == .idle && !viewModel.soldOutMenuNames.isEmpty { showSoldOutAlert = true }
             if phase == .error { showErrorAlert = true }
@@ -147,9 +148,9 @@ struct OrderConfirmView: View {
     // MARK: - Bottom Bar
 
     private var bottomBar: some View {
-        let isProcessing = viewModel.phase == .checkingStock || viewModel.phase == .creatingOrder
+        let isProcessing = viewModel.phase == .checkingStock || viewModel.phase == .stockCheckPassed || viewModel.phase == .creatingOrder
         return Button {
-            Task { await viewModel.startCheckout() }
+            Task { await viewModel.validateStock() }
         } label: {
             Group {
                 if isProcessing {
