@@ -4,6 +4,7 @@ struct OrderView: View {
     @State private var viewModel = OrderViewModel()
     @Environment(AppRouter.self) private var router
     @State private var reviewTarget: Order? = nil
+    @State private var receiptTarget: Order? = nil
 
     var body: some View {
         Group {
@@ -26,6 +27,8 @@ struct OrderView: View {
 
                         if viewModel.orders.count > 1 {
                             PastOrderSection(orders: Array(viewModel.orders.dropFirst())) { order in
+                                receiptTarget = order
+                            } onReviewTapped: { order in
                                 reviewTarget = order
                             }
                         }
@@ -41,6 +44,9 @@ struct OrderView: View {
         }
         .sheet(item: $reviewTarget) { order in
             reviewSheet(for: order)
+        }
+        .sheet(item: $receiptTarget) { order in
+            PaymentReceiptView(orderCode: order.order_code)
         }
     }
 
@@ -180,6 +186,7 @@ private struct OrderMenuListCard: View {
 
 private struct PastOrderSection: View {
     let orders: [Order]
+    var onDetailTapped: (Order) -> Void
     var onReviewTapped: (Order) -> Void
 
     var body: some View {
@@ -199,7 +206,7 @@ private struct PastOrderSection: View {
                         menuNames: order.order_menu_list.compactMap { $0.menu.name },
                         totalPrice: Int(order.total_price),
                         reviewRating: order.review?.rating,
-                        onDetailTapped: {},
+                        onDetailTapped: { onDetailTapped(order) },
                         onReviewTapped: { onReviewTapped(order) }
                     )
                 }
