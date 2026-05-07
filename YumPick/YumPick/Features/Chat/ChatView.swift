@@ -39,19 +39,23 @@ struct ChatView: View {
                                     namespace: mediaNamespace,
                                     onRetry: { Task { await viewModel.retrySend(clientID: message.chatID) } },
                                     onDelete: {
+                                        dismissKeyboard()
                                         deletionConfirmation = .deleteLocal(message)
                                     },
                                     onCancelFailedSend: {
+                                        dismissKeyboard()
                                         deletionConfirmation = .cancelFailedSend(message)
                                     },
                                     onImageTapped: { index in
                                         let mediaFiles = message.files.splitMediaAndPDF().media
+                                        dismissKeyboard()
                                         withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
                                             lightboxFiles = mediaFiles
                                             lightboxIndex = index
                                         }
                                     },
                                     onPDFTapped: { path in
+                                        dismissKeyboard()
                                         pdfViewerPath = path
                                     }
                                 )
@@ -255,6 +259,15 @@ struct ChatView: View {
 
     private func isMineLastMessage() -> Bool {
         viewModel.messages.last.map(viewModel.isMine) ?? false
+    }
+
+    private func dismissKeyboard() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
     }
 
     private func scheduleInitialBottomScroll(proxy: ScrollViewProxy) {
