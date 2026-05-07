@@ -26,6 +26,12 @@ final class AuthSession {
     private(set) var sessionMessage: String?
     private(set) var isCompletingRequiredLogout = false
 
+    var needsAppleCredentialValidation: Bool {
+        state == .authenticated
+            && keychain.read(key: .loginProvider) == LoginProvider.apple.rawValue
+            && keychain.read(key: .appleUserID) != nil
+    }
+
     private let keychain: KeychainManager
     private let loginClient: LoginClientProtocol
 
@@ -119,8 +125,7 @@ final class AuthSession {
     }
 
     func validateAppleCredentialIfNeeded(isNetworkConnected: Bool) async {
-        guard state == .authenticated,
-              keychain.read(key: .loginProvider) == LoginProvider.apple.rawValue,
+        guard needsAppleCredentialValidation,
               let appleUserID = keychain.read(key: .appleUserID)
         else {
             return

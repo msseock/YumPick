@@ -4,13 +4,16 @@ struct RootView: View {
     @Environment(AuthSession.self) private var authSession
     @Environment(NetworkConnectivityMonitor.self) private var networkMonitor
     @Environment(\.scenePhase) private var scenePhase
+    @State private var isResolvingNetworkRecovery = false
 
     var body: some View {
         Group {
             if !networkMonitor.isConnected {
                 NetworkUnavailableView(isRetrying: false) {
-                    Task { await retryNetworkBlockedWork() }
+                    Task { await resolveNetworkAvailableWork() }
                 }
+            } else if isResolvingNetworkRecovery {
+                LaunchView()
             } else {
                 switch authSession.state {
                 case .checking, .logoutRequired:
@@ -26,27 +29,29 @@ struct RootView: View {
             if authSession.state == .checking {
                 await authSession.restore()
             }
-            await retryNetworkBlockedWork()
+            await resolveNetworkAvailableWork()
         }
         .onChange(of: networkMonitor.isConnected) { _, isConnected in
             guard isConnected else { return }
-            Task { await retryNetworkBlockedWork() }
+            Task { await resolveNetworkAvailableWork() }
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
-            Task { await handleForegroundActivation() }
+            Task { await resolveNetworkAvailableWork() }
         }
     }
 
-    private func retryNetworkBlockedWork() async {
+    private func resolveNetworkAvailableWork() async {
         guard networkMonitor.isConnected else { return }
-        if authSession.state == .logoutRequired {
-            await authSession.completeRequiredLogoutIfPossible()
-        }
-    }
 
-    private func handleForegroundActivation() async {
-        guard networkMonitor.isConnected else { return }
+        let shouldBlockUI = authSession.state == .logoutRequired
+            || authSession.needsAppleCredentialValidation
+
+        if shouldBlockUI {
+            isResolvingNetworkRecovery = true
+            defer { isResolvingNetworkRecovery = false }
+        }
+
         if authSession.state == .logoutRequired {
             await authSession.completeRequiredLogoutIfPossible()
         } else {
