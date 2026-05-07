@@ -6,6 +6,7 @@ import iamport_ios
 struct YumPickApp: App {
     @State private var authSession = AuthSession()
     @State private var router = AppRouter()
+    @State private var networkMonitor = NetworkConnectivityMonitor()
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
 
     var body: some Scene {
@@ -13,6 +14,7 @@ struct YumPickApp: App {
             RootView()
                 .environment(authSession)
                 .environment(router)
+                .environment(networkMonitor)
                 .task {
                     NetworkManager.configure(onSessionExpired: authSession.expire)
                     ChatPushHandler.shared.configure(router: router)
