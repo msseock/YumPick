@@ -1,5 +1,10 @@
 import Foundation
 
+enum LoginProvider: String {
+    case email
+    case apple
+}
+
 /// 앱 전역 인증 상태.
 /// - 화면 전환은 RootView 가, HTTP 응답 해석은 Interceptor/NetworkManager 가 담당한다.
 /// - 인스턴스 하나를 YumPickApp 에서 생성해 SwiftUI Environment 로 주입한다. 싱글턴 사용 금지.
@@ -11,23 +16,36 @@ final class AuthSession {
         case authenticated
         case unauthenticated
         case expired
+        case logoutRequired
     }
 
     var state: State = .checking
     private(set) var userID: String?
     private(set) var nick: String?
+    private(set) var sessionMessage: String?
+    private(set) var isCompletingRequiredLogout = false
 
     private let keychain: KeychainManager
+    private let loginClient: LoginClientProtocol
 
-    init(keychain: KeychainManager = .shared) {
-        self.keychain = keychain
+    init(
+        keychain: KeychainManager? = nil,
+        loginClient: LoginClientProtocol? = nil
+    ) {
+        self.keychain = keychain ?? .shared
+        self.loginClient = loginClient ?? LoginClient()
     }
 
     func restore() async {
+        if isLogoutRequired {
+            restoreCachedUser()
+            state = .logoutRequired
+            return
+        }
+
         let accessToken = keychain.read(key: .accessToken)
         let refreshToken = keychain.read(key: .refreshToken)
-        self.userID = keychain.read(key: .userID)
-        self.nick = keychain.read(key: .nick)
+        restoreCachedUser()
 
         guard refreshToken != nil else {
             clearTokens()
@@ -57,14 +75,27 @@ final class AuthSession {
         }
     }
 
-    func login(tokens: AuthTokenBundle) {
+    func login(
+        tokens: AuthTokenBundle,
+        provider: LoginProvider = .email,
+        appleUserID: String? = nil
+    ) {
         keychain.save(key: .accessToken, value: tokens.accessToken)
         keychain.save(key: .refreshToken, value: tokens.refreshToken)
         keychain.save(key: .userID, value: tokens.userID)
         keychain.save(key: .nick, value: tokens.nick)
+        keychain.save(key: .loginProvider, value: provider.rawValue)
+        keychain.delete(key: .logoutRequired)
+
+        if provider == .apple, let appleUserID {
+            keychain.save(key: .appleUserID, value: appleUserID)
+        } else {
+            keychain.delete(key: .appleUserID)
+        }
 
         self.userID = tokens.userID
         self.nick = tokens.nick
+        sessionMessage = nil
         UserSession.shared.set(from: tokens)
         state = .authenticated
     }
@@ -86,16 +117,55 @@ final class AuthSession {
         state = .expired
     }
 
+    func completeRequiredLogoutIfPossible() async {
+        guard isLogoutRequired, !isCompletingRequiredLogout else { return }
+        isCompletingRequiredLogout = true
+        defer { isCompletingRequiredLogout = false }
+
+        do {
+            try await loginClient.logout()
+            clearTokens()
+            state = .unauthenticated
+        } catch {
+            if error.isConnectivityFailure {
+                state = .logoutRequired
+            } else {
+                clearTokens()
+                state = .expired
+            }
+        }
+    }
+
     private func clearTokens() {
         keychain.delete(key: .accessToken)
         keychain.delete(key: .refreshToken)
         keychain.delete(key: .userID)
         keychain.delete(key: .nick)
+        keychain.delete(key: .loginProvider)
+        keychain.delete(key: .appleUserID)
+        keychain.delete(key: .logoutRequired)
         self.userID = nil
         self.nick = nil
+        sessionMessage = nil
         UserSession.shared.clear()
         HomeStoreCache.clear()
     }
+
+    private var isLogoutRequired: Bool {
+        keychain.read(key: .logoutRequired) == "true"
+    }
+
+    private func restoreCachedUser() {
+        self.userID = keychain.read(key: .userID)
+        self.nick = keychain.read(key: .nick)
+    }
+
+    private func markLogoutRequired(message: String) {
+        keychain.save(key: .logoutRequired, value: "true")
+        sessionMessage = message
+        state = .logoutRequired
+    }
+
 }
 
 private extension String {
@@ -131,5 +201,24 @@ private extension String {
         }
 
         return json
+    }
+}
+
+private extension Error {
+    var isConnectivityFailure: Bool {
+        guard let urlError = self as? URLError else { return false }
+        switch urlError.code {
+        case .notConnectedToInternet,
+             .networkConnectionLost,
+             .cannotFindHost,
+             .cannotConnectToHost,
+             .dnsLookupFailed,
+             .timedOut,
+             .dataNotAllowed,
+             .internationalRoamingOff:
+            return true
+        default:
+            return false
+        }
     }
 }

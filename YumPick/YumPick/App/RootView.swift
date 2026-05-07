@@ -8,11 +8,11 @@ struct RootView: View {
         Group {
             if !networkMonitor.isConnected {
                 NetworkUnavailableView(isRetrying: false) {
-                    Task { await authSession.restore() }
+                    Task { await retryNetworkBlockedWork() }
                 }
             } else {
                 switch authSession.state {
-                case .checking:
+                case .checking, .logoutRequired:
                     LaunchView()
                 case .authenticated:
                     TabBarView()
@@ -25,6 +25,18 @@ struct RootView: View {
             if authSession.state == .checking {
                 await authSession.restore()
             }
+            await retryNetworkBlockedWork()
+        }
+        .onChange(of: networkMonitor.isConnected) { _, isConnected in
+            guard isConnected else { return }
+            Task { await retryNetworkBlockedWork() }
+        }
+    }
+
+    private func retryNetworkBlockedWork() async {
+        guard networkMonitor.isConnected else { return }
+        if authSession.state == .logoutRequired {
+            await authSession.completeRequiredLogoutIfPossible()
         }
     }
 }

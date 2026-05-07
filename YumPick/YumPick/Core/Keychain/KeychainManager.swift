@@ -12,6 +12,9 @@ final class KeychainManager {
         case refreshToken = "com.yumpick.refreshToken"
         case userID       = "com.yumpick.userID"
         case nick         = "com.yumpick.nick"
+        case loginProvider = "com.yumpick.loginProvider"
+        case appleUserID  = "com.yumpick.appleUserID"
+        case logoutRequired = "com.yumpick.logoutRequired"
         case fcmToken     = "com.yumpick.fcmToken"
         case realmKey     = "com.yumpick.realmKey"
     }
@@ -106,6 +109,9 @@ final class KeychainManager {
         delete(key: .refreshToken)
         delete(key: .userID)
         delete(key: .nick)
+        delete(key: .loginProvider)
+        delete(key: .appleUserID)
+        delete(key: .logoutRequired)
         delete(key: .fcmToken)
     }
 
