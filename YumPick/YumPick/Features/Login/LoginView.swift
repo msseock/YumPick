@@ -100,8 +100,12 @@ struct LoginView: View {
             hideKeyboard()
             appleSignInCoordinator.start { result in
                 Task {
-                    if let tokens = await viewModel.handleAppleLoginResult(result) {
-                        authSession.login(tokens: tokens)
+                    if let session = await viewModel.handleAppleLoginResult(result) {
+                        authSession.login(
+                            tokens: session.tokens,
+                            provider: .apple,
+                            appleUserID: session.appleUserID
+                        )
                     }
                 }
             }

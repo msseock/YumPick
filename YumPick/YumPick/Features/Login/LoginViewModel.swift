@@ -1,6 +1,11 @@
 import Foundation
 import AuthenticationServices
 
+struct AppleLoginSession {
+    let tokens: AuthTokenBundle
+    let appleUserID: String
+}
+
 @MainActor
 @Observable
 final class LoginViewModel {
@@ -38,7 +43,7 @@ final class LoginViewModel {
         }
     }
 
-    func handleAppleLoginResult(_ result: Result<ASAuthorization, Error>) async -> AuthTokenBundle? {
+    func handleAppleLoginResult(_ result: Result<ASAuthorization, Error>) async -> AppleLoginSession? {
         switch result {
         case .success(let auth):
             guard
@@ -50,7 +55,10 @@ final class LoginViewModel {
                 return nil
             }
             let fcmToken = KeychainManager.shared.read(key: .fcmToken)
-            return await appleLoginTapped(idToken: idToken, deviceToken: fcmToken)
+            guard let tokens = await appleLoginTapped(idToken: idToken, deviceToken: fcmToken) else {
+                return nil
+            }
+            return AppleLoginSession(tokens: tokens, appleUserID: credential.user)
         case .failure(let error):
             errorMessage = error.localizedDescription
             return nil

@@ -1,3 +1,4 @@
+import AuthenticationServices
 import Foundation
 
 enum LoginProvider: String {
@@ -117,6 +118,28 @@ final class AuthSession {
         state = .expired
     }
 
+    func validateAppleCredentialIfNeeded(isNetworkConnected: Bool) async {
+        guard state == .authenticated,
+              keychain.read(key: .loginProvider) == LoginProvider.apple.rawValue,
+              let appleUserID = keychain.read(key: .appleUserID)
+        else {
+            return
+        }
+
+        let credentialState = await appleCredentialState(for: appleUserID)
+        switch credentialState {
+        case .authorized:
+            return
+        case .revoked, .notFound, .transferred:
+            markLogoutRequired(message: "Apple 로그인 사용이 중단되어 다시 로그인해주세요.")
+            if isNetworkConnected {
+                await completeRequiredLogoutIfPossible()
+            }
+        @unknown default:
+            return
+        }
+    }
+
     func completeRequiredLogoutIfPossible() async {
         guard isLogoutRequired, !isCompletingRequiredLogout else { return }
         isCompletingRequiredLogout = true
@@ -166,6 +189,15 @@ final class AuthSession {
         state = .logoutRequired
     }
 
+    private func appleCredentialState(
+        for appleUserID: String
+    ) async -> ASAuthorizationAppleIDProvider.CredentialState {
+        await withCheckedContinuation { continuation in
+            ASAuthorizationAppleIDProvider().getCredentialState(forUserID: appleUserID) { state, _ in
+                continuation.resume(returning: state)
+            }
+        }
+    }
 }
 
 private extension String {
