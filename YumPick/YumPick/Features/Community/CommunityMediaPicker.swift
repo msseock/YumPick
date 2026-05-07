@@ -21,9 +21,18 @@ enum MediaPickerError: LocalizedError {
 @MainActor
 final class CommunityMediaPickerViewModel: ObservableObject {
     @Published var selectedItems: [PhotosPickerItem] = []
+    @Published var existingFilePaths: [String] = []
     @Published var mediaItems: [PostMedia] = []
     @Published var errorMessage: String? = nil
     @Published var isProcessing = false
+
+    var totalMediaCount: Int {
+        existingFilePaths.count + mediaItems.count
+    }
+
+    func configureExistingFiles(_ paths: [String]) {
+        existingFilePaths = paths
+    }
 
     func processSelectedItems(_ items: [PhotosPickerItem]) async {
         isProcessing = true
@@ -52,6 +61,11 @@ final class CommunityMediaPickerViewModel: ObservableObject {
         if selectedItems.indices.contains(index) {
             selectedItems.remove(at: index)
         }
+    }
+
+    func removeExistingFile(at index: Int) {
+        guard existingFilePaths.indices.contains(index) else { return }
+        existingFilePaths.remove(at: index)
     }
 
     private func loadMedia(from item: PhotosPickerItem) async throws -> PostMedia {
@@ -144,10 +158,10 @@ struct MediaGridView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     // 추가 버튼
-                    if pickerVM.mediaItems.count < maxCount {
+                    if pickerVM.totalMediaCount < maxCount {
                         PhotosPicker(
                             selection: $pickerVM.selectedItems,
-                            maxSelectionCount: maxCount,
+                            maxSelectionCount: max(0, maxCount - pickerVM.existingFilePaths.count),
                             matching: .any(of: [.images, .videos])
                         ) {
                             addButton
@@ -155,6 +169,11 @@ struct MediaGridView: View {
                         .onChange(of: pickerVM.selectedItems) { _, newItems in
                             Task { await pickerVM.processSelectedItems(newItems) }
                         }
+                    }
+
+                    // 기존 미디어 썸네일
+                    ForEach(Array(pickerVM.existingFilePaths.enumerated()), id: \.offset) { idx, path in
+                        existingMediaThumbnail(path: path, index: idx)
                     }
 
                     // 선택된 미디어 썸네일
@@ -181,13 +200,47 @@ struct MediaGridView: View {
             Image(systemName: "plus")
                 .font(.system(size: 20))
                 .foregroundStyle(YPColor.textTertiary)
-            Text("\(pickerVM.mediaItems.count)/\(maxCount)")
+            Text("\(pickerVM.totalMediaCount)/\(maxCount)")
                 .font(YPFont.caption2)
                 .foregroundStyle(YPColor.textTertiary)
         }
         .frame(width: 80, height: 80)
         .background(YPColor.backgroundSecondary)
         .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func existingMediaThumbnail(path: String, index: Int) -> some View {
+        ZStack(alignment: .topTrailing) {
+            Group {
+                if isVideoPath(path) {
+                    VideoThumbnailView(path: path, showsPlayIcon: false)
+                } else {
+                    CachedImage(path: path)
+                }
+            }
+            .frame(width: 80, height: 80)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+
+            if isVideoPath(path) {
+                Image(systemName: "play.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.white)
+                    .padding(4)
+                    .background(Color.black.opacity(0.5))
+                    .clipShape(Circle())
+                    .padding(4)
+            }
+
+            Button {
+                pickerVM.removeExistingFile(at: index)
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(.white)
+                    .background(Color.black.opacity(0.4), in: Circle())
+            }
+            .offset(x: 4, y: -4)
+        }
     }
 
     private func mediaThumbnail(media: PostMedia, index: Int) -> some View {

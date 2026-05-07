@@ -8,6 +8,7 @@ struct CommunityComposeView: View {
     @State private var storePickerVM = CommunityStorePickerViewModel()
     @StateObject private var pickerVM = CommunityMediaPickerViewModel()
     @State private var isStorePickerPresented = false
+    @State private var didConfigure = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -97,7 +98,12 @@ struct CommunityComposeView: View {
             }
         }
         .onAppear {
+            guard !didConfigure else { return }
             viewModel.configure(for: mode, existing: existingPost)
+            if case .edit(let post) = mode {
+                pickerVM.configureExistingFiles(post.files)
+            }
+            didConfigure = true
         }
         .onChange(of: viewModel.didSubmit) { _, submitted in
             if submitted { dismiss() }
@@ -172,7 +178,12 @@ struct CommunityComposeView: View {
                     .scaleEffect(0.8)
             } else {
                 Button("완료") {
-                    Task { await viewModel.submit(mediaItems: pickerVM.mediaItems) }
+                    Task {
+                        await viewModel.submit(
+                            existingFileURLs: pickerVM.existingFilePaths,
+                            mediaItems: pickerVM.mediaItems
+                        )
+                    }
                 }
                 .font(YPFont.body3Bold)
                 .foregroundStyle(viewModel.canSubmit ? YPColor.actionAccent : YPColor.textTertiary)

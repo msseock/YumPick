@@ -306,17 +306,29 @@ final class MockCommunityClient: CommunityClientProtocol {
     var createCommentResult: Result<PostComment, Error> = .failure(MockError.notImplemented)
     var updateCommentResult: Result<PostComment, Error> = .failure(MockError.notImplemented)
     var deleteCommentResult: Result<Void, Error> = .success(())
+    private(set) var uploadFilesRequests: [[MultipartData]] = []
+    private(set) var createPostRequests: [CreatePostRequest] = []
+    private(set) var updatePostRequests: [(postId: String, request: UpdatePostRequest)] = []
     private(set) var createCommentRequests: [(postId: String, parentCommentId: String?, content: String)] = []
 
     enum MockError: Error { case notImplemented }
 
     func fetchBanners() async throws -> [Banner] { try fetchBannersResult.get() }
-    func uploadFiles(parts: [MultipartData]) async throws -> [String] { try uploadFilesResult.get() }
-    func createPost(_ request: CreatePostRequest) async throws -> PostDetail { try createPostResult.get() }
+    func uploadFiles(parts: [MultipartData]) async throws -> [String] {
+        uploadFilesRequests.append(parts)
+        return try uploadFilesResult.get()
+    }
+    func createPost(_ request: CreatePostRequest) async throws -> PostDetail {
+        createPostRequests.append(request)
+        return try createPostResult.get()
+    }
     func fetchGeolocationPosts(longitude: Double, latitude: Double, category: String?, orderBy: String, next: String?, limit: Int?) async throws -> PostPage { try fetchGeolocationPostsResult.get() }
     func searchPosts(title: String) async throws -> [PostSummary] { try searchPostsResult.get() }
     func fetchPostDetail(postId: String) async throws -> PostDetail { try fetchPostDetailResult.get() }
-    func updatePost(postId: String, _ request: UpdatePostRequest) async throws -> PostDetail { try updatePostResult.get() }
+    func updatePost(postId: String, _ request: UpdatePostRequest) async throws -> PostDetail {
+        updatePostRequests.append((postId: postId, request: request))
+        return try updatePostResult.get()
+    }
     func deletePost(postId: String) async throws { try deletePostResult.get() }
     func toggleLike(postId: String, likeStatus: Bool) async throws -> Bool { try toggleLikeResult.get() }
     func fetchUserPosts(userId: String, category: String?, next: String?, limit: Int?) async throws -> PostPage { try fetchUserPostsResult.get() }

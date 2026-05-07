@@ -18,9 +18,7 @@ final class CommunityComposeViewModel {
     var didSubmit = false
     var submittedPostId: String? = nil
 
-    // create 모드일 때 원본 post_id (edit 모드에서 기존 파일 URL 추적용)
     private var editingPostId: String? = nil
-    private var existingFileURLs: [String] = []
 
     private let client: CommunityClientProtocol
     private let locationManager: any LocationManagerProtocol
@@ -43,7 +41,6 @@ final class CommunityComposeViewModel {
             title = post.title
             content = post.content
             applySelectedStore(post.store)
-            existingFileURLs = post.files
         }
     }
 
@@ -84,7 +81,7 @@ final class CommunityComposeViewModel {
         category.unicodeScalars.contains { forbiddenCategoryChars.contains($0) }
     }
 
-    func submit(mediaItems: [PostMedia]) async {
+    func submit(existingFileURLs: [String], mediaItems: [PostMedia]) async {
         guard canSubmit, !isSubmitting else { return }
         isSubmitting = true
         defer { isSubmitting = false }
@@ -95,9 +92,9 @@ final class CommunityComposeViewModel {
 
         do {
             // 1단계: 미디어 업로드
-            let fileURLs: [String]
+            let uploadedFileURLs: [String]
             if mediaItems.isEmpty {
-                fileURLs = editingPostId != nil ? existingFileURLs : []
+                uploadedFileURLs = []
             } else {
                 let parts = mediaItems.compactMap { media -> MultipartData? in
                     guard let data = media.data else { return nil }
@@ -108,8 +105,9 @@ final class CommunityComposeViewModel {
                         data: data
                     )
                 }
-                fileURLs = try await client.uploadFiles(parts: parts)
+                uploadedFileURLs = try await client.uploadFiles(parts: parts)
             }
+            let fileURLs = existingFileURLs + uploadedFileURLs
 
             // 2단계: 게시글 생성 or 수정
             if let postId = editingPostId {
@@ -120,7 +118,7 @@ final class CommunityComposeViewModel {
                     store_id: storeId.isEmpty ? nil : storeId,
                     latitude: geo.latitude,
                     longitude: geo.longitude,
-                    files: fileURLs.isEmpty ? nil : fileURLs
+                    files: fileURLs
                 )
                 let updated = try await client.updatePost(postId: postId, request)
                 submittedPostId = updated.post_id
