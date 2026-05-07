@@ -6,6 +6,9 @@ struct ChatView: View {
     @State private var attachedAssets: [ChatAttachment] = []
     @State private var isAtBottom: Bool = true
     @State private var isUploading: Bool = false
+    @State private var didInitialScroll: Bool = false
+    @State private var canLoadOlderMessages: Bool = false
+    @State private var initialScrollTask: Task<Void, Never>?
     @Namespace private var mediaNamespace
     @State private var lightboxFiles: [String] = []
     @State private var lightboxIndex: Int? = nil
@@ -54,6 +57,7 @@ struct ChatView: View {
                                 )
                                 .id(message.id)
                                 .onAppear {
+                                    guard canLoadOlderMessages else { return }
                                     viewModel.loadOlderMessagesIfNeeded(current: message)
                                 }
                             }
@@ -64,6 +68,9 @@ struct ChatView: View {
                     }
                     .background(YPColor.backgroundPrimary)
                     .scrollDismissesKeyboard(.interactively)
+                    .onAppear {
+                        scheduleInitialBottomScroll(proxy: proxy)
+                    }
                     .onScrollGeometryChange(for: Bool.self) { geo in
                         let distanceFromBottom = geo.contentSize.height
                             - geo.contentOffset.y
@@ -72,12 +79,21 @@ struct ChatView: View {
                     } action: { _, nearBottom in
                         isAtBottom = nearBottom
                     }
-                    .onChange(of: viewModel.messages.last?.id) { _, id in
-                        guard let id, isAtBottom || isMineLastMessage() else { return }
-                        withAnimation { proxy.scrollTo(id, anchor: .bottom) }
+                    .onChange(of: viewModel.messages.count) { _, newCount in
+                        guard !didInitialScroll, newCount > 0 else { return }
+                        scheduleInitialBottomScroll(proxy: proxy)
                     }
-                    .onAppear {
-                        proxy.scrollTo("__bottom__", anchor: .bottom)
+                    .onScrollGeometryChange(for: CGFloat.self) { geo in
+                        geo.contentSize.height
+                    } action: { oldHeight, newHeight in
+                        guard !didInitialScroll, newHeight > oldHeight else { return }
+                        scheduleInitialBottomScroll(proxy: proxy)
+                    }
+                    .onChange(of: viewModel.messages.last?.id) { _, id in
+                        guard didInitialScroll, let id else { return }
+                        guard !viewModel.isLoadingOlder,
+                              isAtBottom || isMineLastMessage() else { return }
+                        withAnimation { proxy.scrollTo(id, anchor: .bottom) }
                     }
                     .overlay(alignment: .bottomTrailing) {
                         if !isAtBottom {
@@ -163,10 +179,13 @@ struct ChatView: View {
             }
         }
         .task {
+            canLoadOlderMessages = didInitialScroll
             ChatPushHandler.shared.currentOpenRoomID = viewModel.currentRoomID
             viewModel.onAppear()
         }
         .onDisappear {
+            initialScrollTask?.cancel()
+            initialScrollTask = nil
             ChatPushHandler.shared.currentOpenRoomID = nil
             viewModel.onDisappear()
         }
@@ -236,6 +255,26 @@ struct ChatView: View {
 
     private func isMineLastMessage() -> Bool {
         viewModel.messages.last.map(viewModel.isMine) ?? false
+    }
+
+    private func scheduleInitialBottomScroll(proxy: ScrollViewProxy) {
+        guard !didInitialScroll, !viewModel.messages.isEmpty else { return }
+
+        initialScrollTask?.cancel()
+        initialScrollTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(120))
+            guard !Task.isCancelled, !viewModel.messages.isEmpty else { return }
+
+            proxy.scrollTo("__bottom__", anchor: .bottom)
+
+            try? await Task.sleep(for: .milliseconds(80))
+            guard !Task.isCancelled else { return }
+
+            proxy.scrollTo("__bottom__", anchor: .bottom)
+            didInitialScroll = true
+            canLoadOlderMessages = true
+            initialScrollTask = nil
+        }
     }
 }
 
