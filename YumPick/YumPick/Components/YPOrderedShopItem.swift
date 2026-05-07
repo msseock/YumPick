@@ -4,7 +4,7 @@ struct YPOrderedShopItem: View {
     var imagePath: String?
     var shopName: String
     var orderCode: String
-    var paidAt: String         // ISO 8601
+    var paidAt: String?        // ISO 8601
     var menuNames: [String]    // order_menu_list.compactMap { $0.menu.name }
     var totalPrice: Int
     var reviewRating: Double?  // nil이면 미작성
@@ -58,7 +58,7 @@ struct YPOrderedShopItem: View {
                 .font(YPFont.caption1)
                 .foregroundStyle(YPColor.textTertiary)
 
-            Text(DateFormatManager.shared.orderDate(from: paidAt))
+            Text(paidAt.map { DateFormatManager.shared.orderDate(from: $0) } ?? "")
                 .font(YPFont.caption1)
                 .foregroundStyle(YPColor.borderDefault)
         }

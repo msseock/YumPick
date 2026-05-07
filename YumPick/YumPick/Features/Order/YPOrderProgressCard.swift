@@ -3,7 +3,7 @@ import SwiftUI
 struct YPOrderProgressCard: View {
     var orderCode: String
     var shopName: String
-    var paidAt: String
+    var paidAt: String?
     var storeImagePath: String?
     var timeline: [OrderStatusTimeline]
 
@@ -46,7 +46,7 @@ struct YPOrderProgressCard: View {
     }
 
     private var resolvedSteps: [ResolvedStep] {
-        let dict = Dictionary(uniqueKeysWithValues: timeline.map { ($0.status, $0) })
+        let dict = Dictionary(timeline.map { ($0.status, $0) }, uniquingKeysWith: { first, _ in first })
         return StatusStep.allCases.map { step in
             let entry = dict[step.key]
             let timeLabel = entry?.changedAt.flatMap {
@@ -90,7 +90,7 @@ struct YPOrderProgressCard: View {
                 .foregroundStyle(YPColor.textPrimary)
                 .lineLimit(2)
 
-            Text(DateFormatManager.shared.orderDate(from: paidAt))
+            Text(paidAt.map { DateFormatManager.shared.orderDate(from: $0) } ?? "")
                 .font(YPFont.caption2)
                 .foregroundStyle(YPColor.textTertiary)
                 .lineLimit(2)

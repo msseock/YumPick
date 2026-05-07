@@ -7,7 +7,7 @@ struct Order: Codable, Identifiable {
     let review: OrderReview?
     let store: OrderStore
     let order_menu_list: [OrderMenuItem]
-    let paidAt: String
+    let paidAt: String?
     let current_order_status: String
     let order_status_timeline: [OrderStatusTimeline]
 
