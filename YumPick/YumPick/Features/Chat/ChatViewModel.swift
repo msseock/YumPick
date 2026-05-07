@@ -185,9 +185,17 @@ final class ChatViewModel {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] message in
                 guard let self else { return }
-                self.messages = self.mergeMessages(self.messages + [message])
+                guard message.roomID == self.currentRoomID else { return }
                 do {
-                    try self.repository.saveAll([message], isRoomOpen: true)
+                    if let pendingClientID = self.matchingPendingClientID(for: message) {
+                        try self.repository.replacePending(clientID: pendingClientID, with: message)
+                        self.pendingClientIDs.remove(pendingClientID)
+                        self.failedClientIDs.remove(pendingClientID)
+                        self.messages = self.replacePendingInDisplay(clientID: pendingClientID, with: message)
+                    } else {
+                        self.messages = self.mergeMessages(self.messages + [message])
+                        try self.repository.saveAll([message], isRoomOpen: true)
+                    }
                     try self.repository.markAllRead(roomID: self.currentRoomID)
                 } catch {
                     self.errorMessage = error.localizedDescription
@@ -258,6 +266,16 @@ final class ChatViewModel {
                 if lhs == rhs { return $0.chatID < $1.chatID }
                 return lhs < rhs
             }
+    }
+
+    private func matchingPendingClientID(for message: ChatMessage) -> String? {
+        guard let currentUserID, message.sender.userID == currentUserID else { return nil }
+        return messages.first { candidate in
+            pendingClientIDs.contains(candidate.chatID)
+                && candidate.sender.userID == message.sender.userID
+                && candidate.content == message.content
+                && candidate.files == message.files
+        }?.chatID
     }
 
     private func replacePendingInDisplay(clientID: String, with sent: ChatMessage) -> [ChatMessage] {
