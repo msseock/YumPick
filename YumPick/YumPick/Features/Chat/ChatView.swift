@@ -8,6 +8,7 @@ struct ChatView: View {
     @State private var isUploading: Bool = false
     @State private var didInitialScroll: Bool = false
     @State private var canLoadOlderMessages: Bool = false
+    @State private var isRestoringOlderScroll: Bool = false
     @State private var initialScrollTask: Task<Void, Never>?
     @Namespace private var mediaNamespace
     @State private var lightboxFiles: [String] = []
@@ -60,10 +61,6 @@ struct ChatView: View {
                                     }
                                 )
                                 .id(message.id)
-                                .onAppear {
-                                    guard canLoadOlderMessages else { return }
-                                    viewModel.loadOlderMessagesIfNeeded(current: message)
-                                }
                             }
                             Color.clear.frame(height: 1).id("__bottom__")
                         }
@@ -83,6 +80,16 @@ struct ChatView: View {
                     } action: { _, nearBottom in
                         isAtBottom = nearBottom
                     }
+                    .onScrollGeometryChange(for: Bool.self) { geo in
+                        geo.contentOffset.y < 80
+                    } action: { wasNearTop, isNearTop in
+                        guard canLoadOlderMessages,
+                              didInitialScroll,
+                              !isRestoringOlderScroll,
+                              !wasNearTop,
+                              isNearTop else { return }
+                        Task { await viewModel.loadOlderMessages() }
+                    }
                     .onChange(of: viewModel.messages.count) { _, newCount in
                         guard !didInitialScroll, newCount > 0 else { return }
                         scheduleInitialBottomScroll(proxy: proxy)
@@ -98,6 +105,24 @@ struct ChatView: View {
                         guard !viewModel.isLoadingOlder,
                               isAtBottom || isMineLastMessage() else { return }
                         withAnimation { proxy.scrollTo(id, anchor: .bottom) }
+                    }
+                    .onChange(of: viewModel.pendingOlderAnchorID) { _, anchorID in
+                        guard let anchorID else { return }
+                        isRestoringOlderScroll = true
+                        var transaction = Transaction()
+                        transaction.disablesAnimations = true
+                        withTransaction(transaction) {
+                            proxy.scrollTo(anchorID, anchor: .top)
+                        }
+                        Task { @MainActor in
+                            await Task.yield()
+                            withTransaction(transaction) {
+                                proxy.scrollTo(anchorID, anchor: .top)
+                            }
+                            viewModel.consumePendingOlderAnchorID(anchorID)
+                            try? await Task.sleep(for: .milliseconds(120))
+                            isRestoringOlderScroll = false
+                        }
                     }
                     .overlay(alignment: .bottomTrailing) {
                         if !isAtBottom {

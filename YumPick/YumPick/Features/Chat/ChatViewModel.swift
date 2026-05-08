@@ -15,6 +15,8 @@ final class ChatViewModel {
     private(set) var isLoading: Bool = false
     private(set) var isLoadingOlder: Bool = false
     private(set) var isSending: Bool = false
+    private(set) var hasMoreOlder: Bool = true
+    private(set) var pendingOlderAnchorID: String?
     var errorMessage: String?
 
     private(set) var currentRoomID: String
@@ -63,12 +65,13 @@ final class ChatViewModel {
     // MARK: - Pagination
 
     func loadOlderMessagesIfNeeded(current message: ChatMessage) {
+        guard hasMoreOlder, !isLoadingOlder else { return }
         guard message.id == messages.first?.id else { return }
         Task { await loadOlderMessages() }
     }
 
     func loadOlderMessages() async {
-        guard !isLoadingOlder, let oldest = messages.first else { return }
+        guard hasMoreOlder, !isLoadingOlder, let oldest = messages.first else { return }
         isLoadingOlder = true
         defer { isLoadingOlder = false }
 
@@ -79,11 +82,24 @@ final class ChatViewModel {
                 before: oldestDate,
                 limit: PagePolicy.olderPageSize
             )
-            guard !older.isEmpty else { return }
-            messages = mergeMessages(older + messages)
+            if older.isEmpty {
+                hasMoreOlder = false
+                return
+            }
+            let anchorID = oldest.id
+            prependOlderMessages(older)
+            pendingOlderAnchorID = anchorID
+            if older.count < PagePolicy.olderPageSize {
+                hasMoreOlder = false
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func consumePendingOlderAnchorID(_ id: String) {
+        guard pendingOlderAnchorID == id else { return }
+        pendingOlderAnchorID = nil
     }
 
     // MARK: - Send (Optimistic)
@@ -193,7 +209,7 @@ final class ChatViewModel {
                         self.failedClientIDs.remove(pendingClientID)
                         self.messages = self.replacePendingInDisplay(clientID: pendingClientID, with: message)
                     } else {
-                        self.messages = self.mergeMessages(self.messages + [message])
+                        self.appendMessages([message])
                         try self.repository.saveAll([message], isRoomOpen: true)
                     }
                     try self.repository.markAllRead(roomID: self.currentRoomID)
@@ -221,18 +237,23 @@ final class ChatViewModel {
 
     private func loadInitialLocalMessages() {
         do {
+            let pending = try repository.fetchPendingOrFailed(limit: 100)
+            pendingClientIDs = Set(pending.filter { $0.status == .sending }.map(\.clientID))
+            failedClientIDs = Set(pending.filter { $0.status == .failed }.map(\.clientID))
+
+            guard messages.isEmpty else { return }
+
             let local = try repository.fetchLatestMessages(
                 roomID: currentRoomID,
                 limit: PagePolicy.initialLocalLimit
             )
             messages = local
-            let pending = try repository.fetchPendingOrFailed(limit: 100)
-            pendingClientIDs = Set(pending.filter { $0.status == .sending }.map(\.clientID))
-            failedClientIDs = Set(pending.filter { $0.status == .failed }.map(\.clientID))
+            hasMoreOlder = local.count == PagePolicy.initialLocalLimit
         } catch {
             errorMessage = error.localizedDescription
         }
     }
+
 
     private func syncRecentMessages() async {
         isLoading = true
@@ -245,16 +266,36 @@ final class ChatViewModel {
                 let cursor = DateFormatManager.shared.chatISOString(from: lastDate)
                 let fresh = try await client.fetchMessages(roomID: currentRoomID, next: cursor)
                 try repository.saveAll(fresh, isRoomOpen: true)
-                messages = mergeMessages(messages + fresh)
+                if !fresh.isEmpty {
+                    appendMessages(fresh)
+                }
             } else {
                 let all = try await client.fetchMessages(roomID: currentRoomID, next: nil)
                 try repository.saveAllInitial(all)
-                try repository.markAllRead(roomID: currentRoomID)
-                messages = mergeMessages(all)
+                let latest = try repository.fetchLatestMessages(
+                    roomID: currentRoomID,
+                    limit: PagePolicy.initialLocalLimit
+                )
+                messages = mergeMessages(messages + latest)
+                hasMoreOlder = latest.count == PagePolicy.initialLocalLimit
             }
+
+            try repository.markAllRead(roomID: currentRoomID)
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func appendMessages(_ newMessages: [ChatMessage]) {
+        let roomMessages = newMessages.filter { $0.roomID == currentRoomID }
+        guard !roomMessages.isEmpty else { return }
+        messages = mergeMessages(messages + roomMessages)
+    }
+
+    private func prependOlderMessages(_ olderMessages: [ChatMessage]) {
+        let roomMessages = olderMessages.filter { $0.roomID == currentRoomID }
+        guard !roomMessages.isEmpty else { return }
+        messages = mergeMessages(roomMessages + messages)
     }
 
     private func mergeMessages(_ source: [ChatMessage]) -> [ChatMessage] {
