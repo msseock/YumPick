@@ -7,11 +7,24 @@ final class ChatPushHandler {
     private init() {}
 
     private weak var appRouter: AppRouter?
+    private var isAuthenticated = false
+    private var pendingRoomID: String?
+
     var currentOpenRoomID: String?
     weak var listViewModel: ChatRoomListViewModel?
 
     func configure(router: AppRouter) {
         appRouter = router
+        flushPendingIfPossible()
+    }
+
+    func setAuthenticated(_ authenticated: Bool) {
+        isAuthenticated = authenticated
+        if authenticated {
+            flushPendingIfPossible()
+        } else {
+            pendingRoomID = nil
+        }
     }
 
     // MARK: - 푸시 수신 (포그라운드 수신 / 사용자 탭)
@@ -30,9 +43,21 @@ final class ChatPushHandler {
     // MARK: - 딥링크 네비게이션
 
     private func navigate(to roomID: String) {
-        guard let router = appRouter else { return }
+        guard let router = appRouter, isAuthenticated else {
+            pendingRoomID = roomID
+            return
+        }
         router.selectedTab = .profile
         router.profilePath = [.chatRooms, .chatRoom(roomID)]
+    }
+
+    private func flushPendingIfPossible() {
+        guard let roomID = pendingRoomID,
+              appRouter != nil,
+              isAuthenticated
+        else { return }
+        pendingRoomID = nil
+        navigate(to: roomID)
     }
 
     // MARK: - 페이로드 → Realm 저장

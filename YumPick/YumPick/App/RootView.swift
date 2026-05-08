@@ -39,6 +39,9 @@ struct RootView: View {
             guard phase == .active else { return }
             Task { await resolveNetworkAvailableWork() }
         }
+        .onChange(of: authSession.state, initial: true) { _, newState in
+            ChatPushHandler.shared.setAuthenticated(newState == .authenticated)
+        }
     }
 
     private func resolveNetworkAvailableWork() async {
