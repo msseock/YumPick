@@ -29,5 +29,7 @@ struct ChatRoomListView: View {
             }
         }
         .task { await viewModel.fetchRooms() }
+        .onAppear { ChatPushHandler.shared.listViewModel = viewModel }
+        .onDisappear { ChatPushHandler.shared.listViewModel = nil }
     }
 }

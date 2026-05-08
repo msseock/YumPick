@@ -8,6 +8,7 @@ final class ChatPushHandler {
 
     private weak var appRouter: AppRouter?
     var currentOpenRoomID: String?
+    weak var listViewModel: ChatRoomListViewModel?
 
     func configure(router: AppRouter) {
         appRouter = router
@@ -18,6 +19,9 @@ final class ChatPushHandler {
     func handle(userInfo: [AnyHashable: Any], isUserTap: Bool) {
         guard let roomID = userInfo["room_id"] as? String else { return }
         saveMessageIfPresent(from: userInfo)
+        if let vm = listViewModel {
+            Task { await vm.fetchRooms() }
+        }
         if isUserTap {
             navigate(to: roomID)
         }
