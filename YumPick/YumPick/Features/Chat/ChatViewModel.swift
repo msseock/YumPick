@@ -62,6 +62,12 @@ final class ChatViewModel {
         cancellables.removeAll()
     }
 
+    func resyncOnNetworkRecovery() async {
+        guard isAppeared else { return }
+        socketManager.connect(roomID: currentRoomID)
+        await syncRecentMessages()
+    }
+
     // MARK: - Pagination
 
     func loadOlderMessagesIfNeeded(current message: ChatMessage) {

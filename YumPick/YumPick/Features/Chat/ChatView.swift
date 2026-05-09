@@ -16,6 +16,7 @@ struct ChatView: View {
     @State private var pdfViewerPath: String? = nil
     @State private var deletionConfirmation: ChatMessageDeletionConfirmation?
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(NetworkConnectivityMonitor.self) private var networkMonitor
 
     private var isLightboxActive: Bool { lightboxIndex != nil }
 
@@ -224,6 +225,10 @@ struct ChatView: View {
             case .background: viewModel.onDisappear()
             default:          break
             }
+        }
+        .onChange(of: networkMonitor.isConnected) { wasConnected, isConnected in
+            guard !wasConnected, isConnected else { return }
+            Task { await viewModel.resyncOnNetworkRecovery() }
         }
     }
 

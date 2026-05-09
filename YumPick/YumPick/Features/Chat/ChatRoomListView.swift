@@ -3,6 +3,7 @@ import SwiftUI
 struct ChatRoomListView: View {
     let onSelectRoom: (String) -> Void
     @State private var viewModel = ChatRoomListViewModel()
+    @Environment(NetworkConnectivityMonitor.self) private var networkMonitor
 
     var body: some View {
         Group {
@@ -31,5 +32,9 @@ struct ChatRoomListView: View {
         .task { await viewModel.fetchRooms() }
         .onAppear { ChatPushHandler.shared.listViewModel = viewModel }
         .onDisappear { ChatPushHandler.shared.listViewModel = nil }
+        .onChange(of: networkMonitor.isConnected) { wasConnected, isConnected in
+            guard !wasConnected, isConnected else { return }
+            Task { await viewModel.fetchRooms() }
+        }
     }
 }
