@@ -18,6 +18,8 @@ protocol ChatRealmRepositoryProtocol {
     func unreadCount(roomID: String) throws -> Int
 
     func fetchPendingOrFailed(limit: Int) throws -> [ChatPendingMessage]
+
+    func isHidden(chatID: String) throws -> Bool
 }
 
 struct ChatPendingMessage {
@@ -37,8 +39,10 @@ final class ChatRealmRepository: ChatRealmRepositoryProtocol {
 
     func savePending(_ message: ChatMessage, clientID: String) throws {
         let realm = try Realm(configuration: configuration)
+        let wasHidden = realm.object(ofType: ChatMessageObject.self, forPrimaryKey: message.chatID)?.isHidden ?? false
         let obj = message.toRealmObject(clientID: clientID, status: .sending)
         obj.isRead = true
+        obj.isHidden = wasHidden
         try realm.write {
             realm.add(obj, update: .modified)
         }
@@ -56,13 +60,20 @@ final class ChatRealmRepository: ChatRealmRepositoryProtocol {
     func replacePending(clientID: String, with message: ChatMessage) throws {
         let realm = try Realm(configuration: configuration)
         try realm.write {
+            var wasHidden = false
             if let pending = realm.objects(ChatMessageObject.self)
-                .first(where: { $0.clientID == clientID }),
-               pending.chatID != message.chatID {
-                realm.delete(pending)
+                .first(where: { $0.clientID == clientID }) {
+                wasHidden = pending.isHidden
+                if pending.chatID != message.chatID {
+                    realm.delete(pending)
+                }
+            }
+            if let existing = realm.object(ofType: ChatMessageObject.self, forPrimaryKey: message.chatID) {
+                wasHidden = wasHidden || existing.isHidden
             }
             let obj = message.toRealmObject(clientID: clientID, status: .sent)
             obj.isRead = true
+            obj.isHidden = wasHidden
             realm.add(obj, update: .modified)
         }
     }
@@ -71,7 +82,8 @@ final class ChatRealmRepository: ChatRealmRepositoryProtocol {
         let realm = try Realm(configuration: configuration)
         guard let object = realm.object(ofType: ChatMessageObject.self, forPrimaryKey: chatID) else { return }
         try realm.write {
-            realm.delete(object)
+            object.isHidden = true
+            object.isRead = true
         }
     }
 
@@ -91,8 +103,10 @@ final class ChatRealmRepository: ChatRealmRepositoryProtocol {
         let realm = try Realm(configuration: configuration)
         try realm.write {
             for message in messages {
+                let wasHidden = realm.object(ofType: ChatMessageObject.self, forPrimaryKey: message.chatID)?.isHidden ?? false
                 let obj = message.toRealmObject(status: .sent)
                 obj.isRead = isRoomOpen
+                obj.isHidden = wasHidden
                 realm.add(obj, update: .modified)
             }
         }
@@ -103,9 +117,11 @@ final class ChatRealmRepository: ChatRealmRepositoryProtocol {
         let todayUTC = Calendar(identifier: .gregorian).startOfDay(for: Date())
         try realm.write {
             for message in messages {
+                let wasHidden = realm.object(ofType: ChatMessageObject.self, forPrimaryKey: message.chatID)?.isHidden ?? false
                 let obj = message.toRealmObject(status: .sent)
                 let createdAt = DateFormatManager.shared.date(fromChatISOString: message.createdAt) ?? .distantPast
                 obj.isRead = createdAt < todayUTC
+                obj.isHidden = wasHidden
                 realm.add(obj, update: .modified)
             }
         }
@@ -114,7 +130,7 @@ final class ChatRealmRepository: ChatRealmRepositoryProtocol {
     func fetchLatestMessages(roomID: String, limit: Int) throws -> [ChatMessage] {
         let realm = try Realm(configuration: configuration)
         let results = realm.objects(ChatMessageObject.self)
-            .where { $0.roomID == roomID }
+            .where { $0.roomID == roomID && $0.isHidden == false }
             .sorted(byKeyPath: "createdAt", ascending: false)
             .prefix(limit)
         return results.reversed().map { $0.toDomain() }
@@ -123,7 +139,7 @@ final class ChatRealmRepository: ChatRealmRepositoryProtocol {
     func fetchMessagesBefore(roomID: String, before date: Date, limit: Int) throws -> [ChatMessage] {
         let realm = try Realm(configuration: configuration)
         let results = realm.objects(ChatMessageObject.self)
-            .where { $0.roomID == roomID && $0.createdAt < date }
+            .where { $0.roomID == roomID && $0.createdAt < date && $0.isHidden == false }
             .sorted(byKeyPath: "createdAt", ascending: false)
             .prefix(limit)
         return results.reversed().map { $0.toDomain() }
@@ -150,8 +166,13 @@ final class ChatRealmRepository: ChatRealmRepositoryProtocol {
     func unreadCount(roomID: String) throws -> Int {
         let realm = try Realm(configuration: configuration)
         return realm.objects(ChatMessageObject.self)
-            .where { $0.roomID == roomID && $0.isRead == false }
+            .where { $0.roomID == roomID && $0.isRead == false && $0.isHidden == false }
             .count
+    }
+
+    func isHidden(chatID: String) throws -> Bool {
+        let realm = try Realm(configuration: configuration)
+        return realm.object(ofType: ChatMessageObject.self, forPrimaryKey: chatID)?.isHidden ?? false
     }
 
     func fetchPendingOrFailed(limit: Int) throws -> [ChatPendingMessage] {

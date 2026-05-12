@@ -4,6 +4,7 @@ struct ChatRoomRow: View {
     let room: ChatRoom
     let opponent: ChatSender?
     let unreadCount: Int
+    let lastChat: ChatMessage?
 
     var body: some View {
         HStack(spacing: 12) {
@@ -15,7 +16,7 @@ struct ChatRoomRow: View {
                 Text(displayOpponent?.nick ?? "알 수 없음")
                     .ypFont(YPFont.body2Bold)
                     .foregroundStyle(YPColor.textPrimary)
-                if let last = room.lastChat {
+                if let last = lastChat {
                     Text(last.content.isEmpty ? "이미지" : last.content)
                         .ypFont(YPFont.caption1)
                         .foregroundStyle(YPColor.textSecondary)

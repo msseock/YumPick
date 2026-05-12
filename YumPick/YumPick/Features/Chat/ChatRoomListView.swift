@@ -21,7 +21,8 @@ struct ChatRoomListView: View {
                         ChatRoomRow(
                             room: room,
                             opponent: viewModel.opponent(of: room),
-                            unreadCount: viewModel.unreadCount(for: room)
+                            unreadCount: viewModel.unreadCount(for: room),
+                            lastChat: viewModel.lastChat(for: room)
                         )
                     }
                     .buttonStyle(.plain)
@@ -30,7 +31,10 @@ struct ChatRoomListView: View {
             }
         }
         .task { await viewModel.fetchRooms() }
-        .onAppear { ChatPushHandler.shared.listViewModel = viewModel }
+        .onAppear {
+            ChatPushHandler.shared.listViewModel = viewModel
+            viewModel.refreshLocalState()
+        }
         .onDisappear { ChatPushHandler.shared.listViewModel = nil }
         .onChange(of: networkMonitor.isConnected) { wasConnected, isConnected in
             guard !wasConnected, isConnected else { return }

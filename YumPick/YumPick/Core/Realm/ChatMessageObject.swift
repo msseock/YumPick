@@ -12,6 +12,7 @@ final class ChatMessageObject: Object {
     @Persisted var files: List<String>
     @Persisted var status: String = ChatMessageStatus.sent.rawValue
     @Persisted var isRead: Bool = false
+    @Persisted var isHidden: Bool = false
 }
 
 enum ChatMessageStatus: String {
