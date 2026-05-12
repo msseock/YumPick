@@ -36,8 +36,8 @@ final class CommunityPostDetailViewModel {
     private let chatClient: ChatClientProtocol
 
     init(
-        client: CommunityClientProtocol = CommunityClient(),
-        chatClient: ChatClientProtocol = ChatClient()
+        client: CommunityClientProtocol = FixtureClientFactory.communityClient(),
+        chatClient: ChatClientProtocol = FixtureClientFactory.chatClient()
     ) {
         self.client = client
         self.chatClient = chatClient

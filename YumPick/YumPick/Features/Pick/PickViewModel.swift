@@ -12,7 +12,7 @@ final class PickViewModel {
     private let locationManager: any LocationManagerProtocol
 
     init(
-        client: PickClientProtocol = PickClient(),
+        client: PickClientProtocol = FixtureClientFactory.pickClient(),
         locationManager: any LocationManagerProtocol = LocationManager.shared
     ) {
         self.client = client

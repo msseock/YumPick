@@ -16,7 +16,7 @@ protocol HomeClientProtocol {
     func toggleLike(storeId: String, likeStatus: Bool) async throws -> Bool
 }
 
-struct HomeStorePage {
+struct HomeStorePage: Codable {
     let stores: [StoreSummary]
     let nextCursor: String?
 }

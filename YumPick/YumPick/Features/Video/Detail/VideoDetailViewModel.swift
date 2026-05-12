@@ -33,7 +33,7 @@ final class VideoDetailViewModel {
 
     init(
         video: Video,
-        client: VideoClientProtocol = VideoClient(),
+        client: VideoClientProtocol = FixtureClientFactory.videoClient(),
         player: VideoPlayerViewModel? = nil
     ) {
         self.video = video
@@ -93,7 +93,7 @@ final class VideoDetailViewModel {
             selectedQuality = nil
             hasInitiallyLoaded = true
             hasRecoveredFromExpiry = false
-            guard let url = resolveMediaURL(from: info.stream_url) else {
+            guard let url = FixtureFileResolver.remoteURL(from: info.stream_url) else {
                 #if DEBUG
                 print("❌ [VideoDetail] resolveMediaURL 실패. raw=\(info.stream_url)")
                 #endif
@@ -129,7 +129,7 @@ final class VideoDetailViewModel {
             } else {
                 urlString = info.stream_url
             }
-            guard let url = resolveMediaURL(from: urlString) else {
+            guard let url = FixtureFileResolver.remoteURL(from: urlString) else {
                 loadState = .failed("스트리밍 URL이 올바르지 않습니다")
                 return
             }
@@ -153,7 +153,7 @@ final class VideoDetailViewModel {
         } else {
             urlString = info.stream_url
         }
-        guard let url = resolveMediaURL(from: urlString) else { return }
+        guard let url = FixtureFileResolver.remoteURL(from: urlString) else { return }
         await player.switchSource(url: url)
     }
 
@@ -177,13 +177,13 @@ final class VideoDetailViewModel {
             subtitleCues = []
             return
         }
-        guard let url = resolveMediaURL(from: subtitle.url) else {
+        guard let url = FixtureFileResolver.remoteURL(from: subtitle.url) else {
             subtitleCues = []
             return
         }
         let task = Task<Void, Never> { [weak self] in
             do {
-                let (data, _) = try await URLSession.shared.data(for: Self.makeAuthenticatedRequest(url: url))
+                let (data, _) = try await URLSession.shared.data(for: FixtureFileResolver.authenticatedRequest(for: url))
                 guard !Task.isCancelled else { return }
                 let text = String(data: data, encoding: .utf8) ?? ""
                 let cues = WebVTTParser.parse(text)

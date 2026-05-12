@@ -7,6 +7,12 @@ struct ProfileView: View {
     @State private var viewModel = ProfileViewModel()
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var isShowingProfileEditor = false
+    #if DEBUG
+    @State private var isExportingFixtures = false
+    @State private var fixtureArchiveURL: URL?
+    @State private var isShowingFixtureShare = false
+    @State private var fixtureExportMessage: String?
+    #endif
 
     var body: some View {
         ScrollView {
@@ -45,6 +51,13 @@ struct ProfileView: View {
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }
+        #if DEBUG
+        .sheet(isPresented: $isShowingFixtureShare) {
+            if let fixtureArchiveURL {
+                FixtureShareSheet(url: fixtureArchiveURL)
+            }
+        }
+        #endif
     }
 
     private var header: some View {
@@ -252,8 +265,75 @@ struct ProfileView: View {
                 )
             }
             .disabled(viewModel.isLoading)
+
+            #if DEBUG
+            fixtureExportSection
+            #endif
         }
     }
+
+    #if DEBUG
+    private var fixtureExportSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                Task { await exportFixtures() }
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "square.and.arrow.up.on.square")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(YPColor.actionPrimary)
+                        .frame(width: 28, height: 28)
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(isExportingFixtures ? "Fixture 내보내는 중" : "Fixture 내보내기")
+                            .ypFont(YPFont.body2Bold)
+                            .foregroundStyle(YPColor.textPrimary)
+                        Text("서버 데이터를 JSON과 미디어 ZIP으로 저장")
+                            .ypFont(YPFont.caption1)
+                            .foregroundStyle(YPColor.textSecondary)
+                    }
+
+                    Spacer()
+
+                    if isExportingFixtures {
+                        ProgressView()
+                    } else {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(YPColor.textTertiary)
+                    }
+                }
+                .padding(14)
+                .background(YPColor.backgroundSecondary)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+            .disabled(isExportingFixtures)
+
+            if let fixtureExportMessage {
+                Text(fixtureExportMessage)
+                    .ypFont(YPFont.caption1)
+                    .foregroundStyle(YPColor.textTertiary)
+                    .padding(.horizontal, 4)
+            }
+        }
+    }
+
+    private func exportFixtures() async {
+        guard !isExportingFixtures else { return }
+        isExportingFixtures = true
+        fixtureExportMessage = nil
+        defer { isExportingFixtures = false }
+
+        do {
+            let result = try await FixtureCaptureService().capture()
+            fixtureArchiveURL = result.archiveURL
+            fixtureExportMessage = "완료: 성공 \(result.successCount)개, 실패 \(result.failureCount)개"
+            isShowingFixtureShare = true
+        } catch {
+            fixtureExportMessage = "Fixture 내보내기 실패: \(error.localizedDescription)"
+        }
+    }
+    #endif
 
     private func sectionTitle(_ title: String) -> some View {
         Text(title)

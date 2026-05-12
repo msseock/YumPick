@@ -54,18 +54,22 @@ struct PDFViewerView: View {
         isLoading = true
         defer { isLoading = false }
 
-        guard let url = resolvedURL(from: path) else {
+        guard let url = FixtureFileResolver.remoteURL(from: path) else {
             loadFailed = true
             return
         }
 
-        var request = URLRequest(url: url)
-        request.setValue(SecretConstants.sesacKey, forHTTPHeaderField: "SeSACKey")
-        if let token = KeychainManager.shared.read(key: .accessToken) {
-            request.setValue(token, forHTTPHeaderField: "Authorization")
+        if url.isFileURL {
+            if let doc = PDFDocument(url: url) {
+                document = doc
+            } else {
+                loadFailed = true
+            }
+            return
         }
 
         do {
+            let request = FixtureFileResolver.authenticatedRequest(for: url)
             let (data, _) = try await URLSession.shared.data(for: request)
             if let doc = PDFDocument(data: data) {
                 document = doc
@@ -77,15 +81,6 @@ struct PDFViewerView: View {
         }
     }
 
-    private func resolvedURL(from path: String) -> URL? {
-        if let url = URL(string: path), url.scheme != nil, url.host != nil {
-            return url
-        }
-        let base = SecretConstants.baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        let normalized = path.hasPrefix("/") ? path : "/\(path)"
-        let apiPath = normalized.hasPrefix("/data/") ? "/v1\(normalized)" : normalized
-        return URL(string: base + apiPath)
-    }
 }
 
 private struct PDFKitView: UIViewRepresentable {

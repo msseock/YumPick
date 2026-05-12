@@ -27,7 +27,7 @@ final class OrderConfirmViewModel {
 
     init(
         selection: CheckoutSelection,
-        storeDetailClient: StoreDetailClientProtocol = StoreDetailClient(),
+        storeDetailClient: StoreDetailClientProtocol = FixtureClientFactory.storeDetailClient(),
         checkoutClient: CheckoutClientProtocol = CheckoutClient()
     ) {
         self.selection = selection

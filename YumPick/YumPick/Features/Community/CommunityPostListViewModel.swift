@@ -21,7 +21,7 @@ final class CommunityPostListViewModel {
     private let mode: PostListMode
     private let client: CommunityClientProtocol
 
-    init(mode: PostListMode, client: CommunityClientProtocol = CommunityClient()) {
+    init(mode: PostListMode, client: CommunityClientProtocol = FixtureClientFactory.communityClient()) {
         self.mode = mode
         self.client = client
     }

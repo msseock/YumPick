@@ -12,7 +12,7 @@ final class CommunityStorePickerViewModel {
     private let seoulCityHall = Geolocation(longitude: 126.9780, latitude: 37.5665)
 
     init(
-        client: HomeClientProtocol = HomeClient(),
+        client: HomeClientProtocol = FixtureClientFactory.homeClient(),
         locationManager: any LocationManagerProtocol = LocationManager.shared
     ) {
         self.client = client

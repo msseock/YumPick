@@ -9,7 +9,7 @@ final class OrderViewModel {
 
     private let client: OrderClientProtocol
 
-    init(client: OrderClientProtocol = OrderClient()) {
+    init(client: OrderClientProtocol = FixtureClientFactory.orderClient()) {
         self.client = client
     }
 

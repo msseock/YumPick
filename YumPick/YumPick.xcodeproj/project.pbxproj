@@ -13,6 +13,7 @@
 		C5C51C8C2FA9E6170017490F /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = C5C51C8B2FA9E6170017490F /* SocketIO */; };
 		C5C51F802FAA096B0017490F /* Realm in Frameworks */ = {isa = PBXBuildFile; productRef = C5C51F7F2FAA096B0017490F /* Realm */; };
 		C5C51F822FAA096B0017490F /* RealmSwift in Frameworks */ = {isa = PBXBuildFile; productRef = C5C51F812FAA096B0017490F /* RealmSwift */; };
+		C5F1A0012FC0000000000001 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = C5F1A0032FC0000000000001 /* ZIPFoundation */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -78,6 +79,7 @@
 				C56B7C5C2FA351CA00516EC7 /* iamport-ios in Frameworks */,
 				C56B7AB82FA07BB400516EC7 /* FirebaseMessaging in Frameworks */,
 				C5BC43D62F991D530014A0AF /* Kingfisher in Frameworks */,
+				C5F1A0012FC0000000000001 /* ZIPFoundation in Frameworks */,
 				C5C51C8C2FA9E6170017490F /* SocketIO in Frameworks */,
 				C5C51F802FAA096B0017490F /* Realm in Frameworks */,
 			);
@@ -146,6 +148,7 @@
 				C5C51C8B2FA9E6170017490F /* SocketIO */,
 				C5C51F7F2FAA096B0017490F /* Realm */,
 				C5C51F812FAA096B0017490F /* RealmSwift */,
+				C5F1A0032FC0000000000001 /* ZIPFoundation */,
 			);
 			productName = YumPick;
 			productReference = C5BC43A72F99051F0014A0AF /* YumPick.app */;
@@ -235,6 +238,7 @@
 				C56B7C5A2FA351CA00516EC7 /* XCRemoteSwiftPackageReference "iamport-ios" */,
 				C5C51C8A2FA9E6170017490F /* XCRemoteSwiftPackageReference "socket" */,
 				C5C51F7E2FAA096B0017490F /* XCRemoteSwiftPackageReference "realm-swift" */,
+				C5F1A0022FC0000000000001 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C5BC43A82F99051F0014A0AF /* Products */;
@@ -685,6 +689,14 @@
 				version = 10.33.0;
 			};
 		};
+		C5F1A0022FC0000000000001 /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/weichsel/ZIPFoundation.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.19;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -717,6 +729,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C5C51F7E2FAA096B0017490F /* XCRemoteSwiftPackageReference "realm-swift" */;
 			productName = RealmSwift;
+		};
+		C5F1A0032FC0000000000001 /* ZIPFoundation */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C5F1A0022FC0000000000001 /* XCRemoteSwiftPackageReference "ZIPFoundation" */;
+			productName = ZIPFoundation;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -67,6 +67,10 @@ struct CachedImage: View {
             return .empty
         }
 
+        if let fixtureURL = FixtureFileResolver.localAssetURL(from: path) {
+            return .valid(fixtureURL)
+        }
+
         if let url = URL(string: path), url.scheme != nil, url.host != nil {
             return .valid(url)
         }

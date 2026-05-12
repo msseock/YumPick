@@ -22,7 +22,7 @@ final class WriteReviewViewModel {
     let mode: ReviewMode
     private let client: ReviewClientProtocol
 
-    init(mode: ReviewMode, client: ReviewClientProtocol = ReviewClient()) {
+    init(mode: ReviewMode, client: ReviewClientProtocol = FixtureClientFactory.reviewClient()) {
         self.mode = mode
         self.client = client
     }

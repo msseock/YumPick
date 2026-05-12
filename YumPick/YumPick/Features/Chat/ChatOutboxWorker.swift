@@ -22,7 +22,7 @@ final class ChatOutboxWorker {
 
     init(
         repository: ChatRealmRepositoryProtocol = ChatRealmRepository(),
-        client: ChatClientProtocol = ChatClient()
+        client: ChatClientProtocol = FixtureClientFactory.chatClient()
     ) {
         self.repository = repository
         self.client = client
