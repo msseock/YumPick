@@ -2,7 +2,7 @@ import Foundation
 import RealmSwift
 
 enum RealmConfig {
-    static let currentSchemaVersion: UInt64 = 1
+    static let currentSchemaVersion: UInt64 = 2
 
     static func make() -> Realm.Configuration {
         var config = Realm.Configuration.defaultConfiguration
