@@ -15,6 +15,7 @@ struct ChatView: View {
     @State private var lightboxIndex: Int? = nil
     @State private var pdfViewerPath: String? = nil
     @State private var deletionConfirmation: ChatMessageDeletionConfirmation?
+    @State private var newMessagePreview: ChatMessage?
     @Environment(\.scenePhase) private var scenePhase
     @Environment(NetworkConnectivityMonitor.self) private var networkMonitor
 
@@ -92,8 +93,9 @@ struct ChatView: View {
                         Task { await viewModel.loadOlderMessages() }
                     }
                     .onChange(of: viewModel.messages.count) { _, newCount in
-                        guard !didInitialScroll, newCount > 0 else { return }
-                        scheduleInitialBottomScroll(proxy: proxy)
+                        if !didInitialScroll, newCount > 0 {
+                            scheduleInitialBottomScroll(proxy: proxy)
+                        }
                     }
                     .onScrollGeometryChange(for: CGFloat.self) { geo in
                         geo.contentSize.height
@@ -102,10 +104,17 @@ struct ChatView: View {
                         scheduleInitialBottomScroll(proxy: proxy)
                     }
                     .onChange(of: viewModel.messages.last?.id) { _, id in
-                        guard didInitialScroll, let id else { return }
-                        guard !viewModel.isLoadingOlder,
-                              isAtBottom || isMineLastMessage() else { return }
-                        withAnimation { proxy.scrollTo(id, anchor: .bottom) }
+                        guard didInitialScroll, let id, let last = viewModel.messages.last else { return }
+                        guard !viewModel.isLoadingOlder else { return }
+                        if isAtBottom || viewModel.isMine(last) {
+                            newMessagePreview = nil
+                            withAnimation { proxy.scrollTo(id, anchor: .bottom) }
+                        } else {
+                            newMessagePreview = last
+                        }
+                    }
+                    .onChange(of: isAtBottom) { _, atBottom in
+                        if atBottom { newMessagePreview = nil }
                     }
                     .onChange(of: viewModel.pendingOlderAnchorID) { _, anchorID in
                         guard let anchorID else { return }
@@ -127,9 +136,20 @@ struct ChatView: View {
                     }
                     .overlay(alignment: .bottomTrailing) {
                         if !isAtBottom {
-                            ScrollToBottomButton {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                                    proxy.scrollTo("__bottom__", anchor: .bottom)
+                            Group {
+                                if let preview = newMessagePreview {
+                                    ChatNewMessagePreviewPill(message: preview) {
+                                        newMessagePreview = nil
+                                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                            proxy.scrollTo("__bottom__", anchor: .bottom)
+                                        }
+                                    }
+                                } else {
+                                    ScrollToBottomButton {
+                                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                            proxy.scrollTo("__bottom__", anchor: .bottom)
+                                        }
+                                    }
                                 }
                             }
                             .padding(.trailing, 16)
@@ -138,6 +158,7 @@ struct ChatView: View {
                         }
                     }
                     .animation(.easeInOut(duration: 0.2), value: isAtBottom)
+                    .animation(.easeInOut(duration: 0.2), value: newMessagePreview?.id)
                 }
 
                 if let error = viewModel.errorMessage {
@@ -287,10 +308,6 @@ struct ChatView: View {
         return !Calendar.current.isDate(currentDate, inSameDayAs: previousDate)
     }
 
-    private func isMineLastMessage() -> Bool {
-        viewModel.messages.last.map(viewModel.isMine) ?? false
-    }
-
     private func dismissKeyboard() {
         UIApplication.shared.sendAction(
             #selector(UIResponder.resignFirstResponder),
@@ -384,6 +401,47 @@ struct ChatDateDivider: View {
             }
             .padding(.vertical, 8)
         }
+    }
+}
+
+struct ChatNewMessagePreviewPill: View {
+    let message: ChatMessage
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(message.sender.nick)
+                        .ypFont(YPFont.caption2)
+                        .foregroundStyle(YPColor.textSecondary)
+                        .lineLimit(1)
+                    Text(previewText)
+                        .ypFont(YPFont.caption1)
+                        .foregroundStyle(YPColor.textPrimary)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(YPColor.textSecondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .frame(maxWidth: 280)
+            .background(YPColor.backgroundPrimary, in: Capsule())
+            .overlay(Capsule().stroke(YPColor.borderSubtle, lineWidth: 1))
+            .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var previewText: String {
+        let trimmed = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { return trimmed }
+        if !message.files.isEmpty { return "파일 \(message.files.count)개" }
+        return ""
     }
 }
 
