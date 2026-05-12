@@ -19,14 +19,14 @@ struct ChatBubbleView: View {
             if isMine { Spacer(minLength: 48) }
 
             if !isMine {
-                CachedImage(path: message.sender.profileImage)
+                CachedImage(path: displaySender.profileImage)
                     .frame(width: 36, height: 36)
                     .clipShape(Circle())
             }
 
             VStack(alignment: isMine ? .trailing : .leading, spacing: 4) {
                 if !isMine {
-                    Text(message.sender.nick)
+                    Text(displaySender.nick)
                         .ypFont(YPFont.caption1)
                         .foregroundStyle(YPColor.textSecondary)
                 }
@@ -175,6 +175,10 @@ struct ChatBubbleView: View {
     }
 
     // MARK: - Helpers
+
+    private var displaySender: ChatSender {
+        ChatUserDirectory.shared.profile(for: message.sender.userID) ?? message.sender
+    }
 
     private var bubbleBackground: Color {
         isMine ? YPColor.actionPrimary : YPColor.backgroundSecondary

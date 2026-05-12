@@ -7,12 +7,12 @@ struct ChatRoomRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            CachedImage(path: opponent?.profileImage)
+            CachedImage(path: displayOpponent?.profileImage)
                 .frame(width: 48, height: 48)
                 .clipShape(Circle())
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(opponent?.nick ?? "알 수 없음")
+                Text(displayOpponent?.nick ?? "알 수 없음")
                     .ypFont(YPFont.body2Bold)
                     .foregroundStyle(YPColor.textPrimary)
                 if let last = room.lastChat {
@@ -41,5 +41,10 @@ struct ChatRoomRow: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    private var displayOpponent: ChatSender? {
+        guard let opponent else { return nil }
+        return ChatUserDirectory.shared.profile(for: opponent.userID) ?? opponent
     }
 }
