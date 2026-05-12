@@ -6,9 +6,10 @@ protocol InterceptorProtocol {
     func refreshTokens() async throws -> RefreshedAuthTokens
 }
 
-final class Interceptor: InterceptorProtocol {
+actor Interceptor: InterceptorProtocol {
     private let keychain: KeychainManager
     private let onSessionExpired: @Sendable () async -> Void
+    private var refreshTask: Task<RefreshedAuthTokens, Error>?
 
     init(
         keychain: KeychainManager = .shared,
@@ -35,7 +36,21 @@ final class Interceptor: InterceptorProtocol {
         return retryRequest
     }
 
+    // 진행 중인 refresh Task가 있으면 그 결과를 함께 기다려 중복 refresh를 방지
     func refreshTokens() async throws -> RefreshedAuthTokens {
+        print("토큰갱신요청")
+        if let existing = refreshTask {
+            return try await existing.value
+        }
+        let task = Task<RefreshedAuthTokens, Error> {
+            try await self.performRefresh()
+        }
+        refreshTask = task
+        defer { refreshTask = nil }
+        return try await task.value
+    }
+
+    private func performRefresh() async throws -> RefreshedAuthTokens {
         guard let refreshToken = keychain.read(key: .refreshToken) else {
             await onSessionExpired()
             throw NetworkError.refreshTokenExpired
@@ -50,7 +65,7 @@ final class Interceptor: InterceptorProtocol {
             accessToken: accessToken,
             refreshToken: refreshToken
         )
-        
+
         keychain.save(key: .accessToken, value: newTokens.accessToken)
         keychain.save(key: .refreshToken, value: newTokens.refreshToken)
         return newTokens
