@@ -16,6 +16,9 @@ struct ChatView: View {
     @State private var pdfViewerPath: String? = nil
     @State private var deletionConfirmation: ChatMessageDeletionConfirmation?
     @State private var newMessagePreview: ChatMessage?
+    @State private var isAutoScrolling: Bool = false
+    @State private var autoScrollSuppressTask: Task<Void, Never>?
+    @State private var wasAtBottomBeforeNewMessage: Bool = true
     @Environment(\.scenePhase) private var scenePhase
     @Environment(NetworkConnectivityMonitor.self) private var networkMonitor
 
@@ -74,13 +77,30 @@ struct ChatView: View {
                     .onAppear {
                         scheduleInitialBottomScroll(proxy: proxy)
                     }
-                    .onScrollGeometryChange(for: Bool.self) { geo in
+                    .onScrollGeometryChange(for: ChatScrollMetrics.self) { geo in
                         let distanceFromBottom = geo.contentSize.height
                             - geo.contentOffset.y
                             - geo.containerSize.height
-                        return distanceFromBottom < 200
-                    } action: { _, nearBottom in
+                        return ChatScrollMetrics(
+                            contentHeight: geo.contentSize.height,
+                            distanceFromBottom: distanceFromBottom
+                        )
+                    } action: { oldMetrics, metrics in
+                        let nearBottom = metrics.isNearBottom
+                        let didContentGrow = metrics.contentHeight > oldMetrics.contentHeight
                         isAtBottom = nearBottom
+                        if didContentGrow {
+                            if oldMetrics.isNearBottom, didInitialScroll, !viewModel.isLoadingOlder {
+                                wasAtBottomBeforeNewMessage = true
+                                newMessagePreview = nil
+                                beginAutoScrollSuppression()
+                                withAnimation {
+                                    proxy.scrollTo("__bottom__", anchor: .bottom)
+                                }
+                            }
+                        } else {
+                            wasAtBottomBeforeNewMessage = nearBottom
+                        }
                     }
                     .onScrollGeometryChange(for: Bool.self) { geo in
                         geo.contentOffset.y < 80
@@ -106,8 +126,9 @@ struct ChatView: View {
                     .onChange(of: viewModel.messages.last?.id) { _, id in
                         guard didInitialScroll, let id, let last = viewModel.messages.last else { return }
                         guard !viewModel.isLoadingOlder else { return }
-                        if isAtBottom || viewModel.isMine(last) {
+                        if wasAtBottomBeforeNewMessage || viewModel.isMine(last) {
                             newMessagePreview = nil
+                            beginAutoScrollSuppression()
                             withAnimation { proxy.scrollTo(id, anchor: .bottom) }
                         } else {
                             newMessagePreview = last
@@ -135,7 +156,7 @@ struct ChatView: View {
                         }
                     }
                     .overlay(alignment: .bottomTrailing) {
-                        if !isAtBottom {
+                        if !isAtBottom && !isAutoScrolling {
                             Group {
                                 if let preview = newMessagePreview {
                                     ChatNewMessagePreviewPill(message: preview) {
@@ -237,6 +258,9 @@ struct ChatView: View {
         .onDisappear {
             initialScrollTask?.cancel()
             initialScrollTask = nil
+            autoScrollSuppressTask?.cancel()
+            autoScrollSuppressTask = nil
+            isAutoScrolling = false
             ChatPushHandler.shared.currentOpenRoomID = nil
             viewModel.onDisappear()
         }
@@ -317,6 +341,17 @@ struct ChatView: View {
         )
     }
 
+    private func beginAutoScrollSuppression() {
+        autoScrollSuppressTask?.cancel()
+        isAutoScrolling = true
+        autoScrollSuppressTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(450))
+            guard !Task.isCancelled else { return }
+            isAutoScrolling = false
+            autoScrollSuppressTask = nil
+        }
+    }
+
     private func scheduleInitialBottomScroll(proxy: ScrollViewProxy) {
         guard !didInitialScroll, !viewModel.messages.isEmpty else { return }
 
@@ -339,6 +374,15 @@ struct ChatView: View {
 }
 
 // MARK: - Supporting Views
+
+private struct ChatScrollMetrics: Equatable {
+    let contentHeight: CGFloat
+    let distanceFromBottom: CGFloat
+
+    var isNearBottom: Bool {
+        distanceFromBottom < 200
+    }
+}
 
 private struct ChatMessageDeletionConfirmation: Identifiable {
     enum Kind {
