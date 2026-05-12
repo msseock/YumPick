@@ -24,6 +24,7 @@ final class ChatRoomListViewModel {
         defer { isLoading = false }
         do {
             rooms = try await client.fetchRooms()
+            ChatUserDirectory.shared.upsert(rooms.flatMap(\.participants))
             refreshUnreadCounts()
         } catch {
             errorMessage = error.localizedDescription

@@ -57,6 +57,9 @@ final class ChatOutboxWorker {
                         content: item.content,
                         files: item.files
                     )
+                    await MainActor.run {
+                        ChatUserDirectory.shared.upsert(sent.sender)
+                    }
                     try repository.replacePending(clientID: item.clientID, with: sent)
                     sentMessageSubject.send(SentMessage(clientID: item.clientID, message: sent))
                 } catch {

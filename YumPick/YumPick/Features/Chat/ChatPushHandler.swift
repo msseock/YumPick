@@ -66,6 +66,7 @@ final class ChatPushHandler {
         do {
             let data = try JSONSerialization.data(withJSONObject: userInfo)
             let message = try JSONDecoder().decode(ChatMessage.self, from: data)
+            ChatUserDirectory.shared.upsert(message.sender)
             let repo = ChatRealmRepository()
             try repo.saveAll([message], isRoomOpen: false)
         } catch {

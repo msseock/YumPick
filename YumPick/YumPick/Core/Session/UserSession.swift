@@ -17,6 +17,11 @@ final class UserSession {
         self.userID = userID
         self.nick = nick
         self.profileImage = profileImage
+        Task { @MainActor in
+            ChatUserDirectory.shared.upsert(
+                ChatSender(userID: userID, nick: nick, profileImage: profileImage)
+            )
+        }
     }
 
     func clear() {

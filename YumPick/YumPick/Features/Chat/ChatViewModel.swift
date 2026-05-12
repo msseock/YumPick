@@ -144,6 +144,7 @@ final class ChatViewModel {
 
         do {
             let sent = try await client.sendMessage(roomID: currentRoomID, content: trimmed, files: files)
+            ChatUserDirectory.shared.upsert(sent.sender)
             try repository.replacePending(clientID: clientID, with: sent)
             pendingClientIDs.remove(clientID)
             failedClientIDs.remove(clientID)
@@ -208,6 +209,7 @@ final class ChatViewModel {
             .sink { [weak self] message in
                 guard let self else { return }
                 guard message.roomID == self.currentRoomID else { return }
+                ChatUserDirectory.shared.upsert(message.sender)
                 do {
                     if let pendingClientID = self.matchingPendingClientID(for: message) {
                         try self.repository.replacePending(clientID: pendingClientID, with: message)
@@ -271,12 +273,14 @@ final class ChatViewModel {
             if let lastDate {
                 let cursor = DateFormatManager.shared.chatISOString(from: lastDate)
                 let fresh = try await client.fetchMessages(roomID: currentRoomID, next: cursor)
+                ChatUserDirectory.shared.upsert(fresh.map(\.sender))
                 try repository.saveAll(fresh, isRoomOpen: true)
                 if !fresh.isEmpty {
                     appendMessages(fresh)
                 }
             } else {
                 let all = try await client.fetchMessages(roomID: currentRoomID, next: nil)
+                ChatUserDirectory.shared.upsert(all.map(\.sender))
                 try repository.saveAllInitial(all)
                 let latest = try repository.fetchLatestMessages(
                     roomID: currentRoomID,
