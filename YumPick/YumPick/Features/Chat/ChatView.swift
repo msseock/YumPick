@@ -308,7 +308,7 @@ struct ChatView: View {
             )
         }
         do {
-            let paths = try await ChatClient().uploadFiles(roomID: viewModel.currentRoomID, parts: parts)
+            let paths = try await FixtureClientFactory.chatClient().uploadFiles(roomID: viewModel.currentRoomID, parts: parts)
             for (asset, path) in zip(assets, paths) where asset.kind == .pdf {
                 ChatFileNameCache.shared.set(path: path, originalName: asset.fileName)
             }

@@ -15,7 +15,7 @@ final class ReviewListViewModel {
     let storeId: String
     private let client: ReviewClientProtocol
 
-    init(storeId: String, client: ReviewClientProtocol = ReviewClient()) {
+    init(storeId: String, client: ReviewClientProtocol = FixtureClientFactory.reviewClient()) {
         self.storeId = storeId
         self.client = client
     }

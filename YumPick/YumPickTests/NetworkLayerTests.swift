@@ -161,6 +161,7 @@ private enum BadURLAPI: Endpoint {
 final class MockInterceptor: InterceptorProtocol {
     var adaptHandler: ((URLRequest) async throws -> URLRequest)?
     var retryHandler: ((URLRequest) async throws -> URLRequest)?
+    var refreshTokensHandler: (() async throws -> RefreshedAuthTokens)?
 
     func adapt(_ request: URLRequest) async throws -> URLRequest {
         try await adaptHandler?(request) ?? request
@@ -168,6 +169,11 @@ final class MockInterceptor: InterceptorProtocol {
 
     func retry(_ request: URLRequest) async throws -> URLRequest {
         if let handler = retryHandler { return try await handler(request) }
+        throw NetworkError.refreshTokenExpired
+    }
+
+    func refreshTokens() async throws -> RefreshedAuthTokens {
+        if let handler = refreshTokensHandler { return try await handler() }
         throw NetworkError.refreshTokenExpired
     }
 }

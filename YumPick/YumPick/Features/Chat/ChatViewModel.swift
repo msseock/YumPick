@@ -31,7 +31,7 @@ final class ChatViewModel {
     init(
         roomID: String,
         currentUserID: String? = KeychainManager.shared.read(key: .userID),
-        client: ChatClientProtocol = ChatClient(),
+        client: ChatClientProtocol = FixtureClientFactory.chatClient(),
         socketManager: ChatSocketManagerProtocol = ChatSocketManager(),
         repository: ChatRealmRepositoryProtocol = ChatRealmRepository(),
         outbox: ChatOutboxWorker = .shared

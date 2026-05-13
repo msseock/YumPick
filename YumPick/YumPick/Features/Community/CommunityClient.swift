@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Pagination Wrapper
 
-struct PostPage {
+struct PostPage: Codable {
     let posts: [PostSummary]
     let nextCursor: String?
 }

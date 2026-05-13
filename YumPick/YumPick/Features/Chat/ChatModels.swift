@@ -3,7 +3,7 @@ import RealmSwift
 
 // MARK: - Domain Models
 
-struct ChatMessage: Identifiable, Equatable, Decodable {
+struct ChatMessage: Identifiable, Equatable, Codable {
     let chatID: String
     let roomID: String
     let content: String
@@ -56,9 +56,20 @@ struct ChatMessage: Identifiable, Equatable, Decodable {
         sender = try container.decode(ChatSender.self, forKey: .sender)
         files = try container.decodeIfPresent([String].self, forKey: .files) ?? []
     }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(chatID, forKey: .chatID)
+        try container.encode(roomID, forKey: .roomID)
+        try container.encode(content, forKey: .content)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(updatedAt, forKey: .updatedAt)
+        try container.encode(sender, forKey: .sender)
+        try container.encode(files, forKey: .files)
+    }
 }
 
-struct ChatSender: Equatable, Decodable {
+struct ChatSender: Equatable, Codable {
     let userID: String
     let nick: String
     let profileImage: String?
@@ -83,9 +94,16 @@ struct ChatSender: Equatable, Decodable {
         profileImage = try container.decodeIfPresent(String.self, forKey: .profileImage)
             ?? container.decodeIfPresent(String.self, forKey: .profile_image)
     }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(userID, forKey: .userID)
+        try container.encode(nick, forKey: .nick)
+        try container.encodeIfPresent(profileImage, forKey: .profileImage)
+    }
 }
 
-struct ChatRoom: Identifiable, Equatable, Decodable {
+struct ChatRoom: Identifiable, Equatable, Codable {
     let roomID: String
     let createdAt: String
     let updatedAt: String
@@ -115,6 +133,15 @@ struct ChatRoom: Identifiable, Equatable, Decodable {
         participants = try container.decode([ChatSender].self, forKey: .participants)
         lastChat = try container.decodeIfPresent(ChatMessage.self, forKey: .lastChat)
             ?? container.decodeIfPresent(ChatMessage.self, forKey: .last_chat)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(roomID, forKey: .roomID)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(updatedAt, forKey: .updatedAt)
+        try container.encode(participants, forKey: .participants)
+        try container.encodeIfPresent(lastChat, forKey: .lastChat)
     }
 
     func opponent(currentUserID: String?) -> ChatSender? {

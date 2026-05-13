@@ -27,7 +27,7 @@ struct UpdateReviewRequest: Encodable {
     let review_image_urls: [String]?
 }
 
-struct ReviewPage {
+struct ReviewPage: Codable {
     let reviews: [Review]
     let nextCursor: String
 }

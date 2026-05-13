@@ -32,7 +32,7 @@ final class ProfileViewModel {
     private let client: ProfileClientProtocol
     private let maxProfileImageBytes = 1 * 1024 * 1024
 
-    init(client: ProfileClientProtocol = ProfileClient()) {
+    init(client: ProfileClientProtocol = FixtureClientFactory.profileClient()) {
         self.client = client
     }
 

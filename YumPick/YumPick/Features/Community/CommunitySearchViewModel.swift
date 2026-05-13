@@ -10,7 +10,7 @@ final class CommunitySearchViewModel {
     private var searchTask: Task<Void, Never>? = nil
     private let client: CommunityClientProtocol
 
-    init(client: CommunityClientProtocol = CommunityClient()) {
+    init(client: CommunityClientProtocol = FixtureClientFactory.communityClient()) {
         self.client = client
     }
 

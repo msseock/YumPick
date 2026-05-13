@@ -13,7 +13,7 @@ final class ChatRoomListViewModel {
     private let repository: ChatRealmRepositoryProtocol
 
     init(
-        client: ChatClientProtocol = ChatClient(),
+        client: ChatClientProtocol = FixtureClientFactory.chatClient(),
         repository: ChatRealmRepositoryProtocol = ChatRealmRepository()
     ) {
         self.client = client

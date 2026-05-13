@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Models
 
-struct MyProfile: Equatable {
+struct MyProfile: Codable, Equatable {
     let userID: String
     let email: String
     let nick: String

@@ -77,7 +77,7 @@ final class HomeViewModel {
     private let locationManager: any LocationManagerProtocol
 
     init(
-        client: HomeClientProtocol = HomeClient(),
+        client: HomeClientProtocol = FixtureClientFactory.homeClient(),
         locationManager: any LocationManagerProtocol = LocationManager.shared
     ) {
         self.client = client

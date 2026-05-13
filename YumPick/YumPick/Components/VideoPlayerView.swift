@@ -52,7 +52,7 @@ struct VideoPlayerView: View {
     }
 
     private func setupAndPlay() {
-        guard let url = resolveURL(from: path) else { return }
+        guard let url = FixtureFileResolver.remoteURL(from: path) else { return }
 
         let headers: [String: String] = {
             var h = ["SeSACKey": SecretConstants.sesacKey]
@@ -62,7 +62,8 @@ struct VideoPlayerView: View {
             return h
         }()
 
-        let asset = AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": headers])
+        let options = url.isFileURL ? nil : ["AVURLAssetHTTPHeaderFieldsKey": headers]
+        let asset = AVURLAsset(url: url, options: options)
         let item = AVPlayerItem(asset: asset)
         let newPlayer = AVPlayer(playerItem: item)
         player = newPlayer
@@ -70,22 +71,6 @@ struct VideoPlayerView: View {
         isPlaying = true
     }
 
-    private func resolveURL(from path: String) -> URL? {
-        let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-
-        if let url = URL(string: trimmed), url.scheme != nil, url.host != nil {
-            return url
-        }
-
-        let base = SecretConstants.baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        let apiPath: String = {
-            let p = trimmed.hasPrefix("/") ? trimmed : "/\(trimmed)"
-            return p.hasPrefix("/data/") ? "/v1\(p)" : p
-        }()
-
-        return URL(string: base + apiPath)
-    }
 }
 
 // MARK: - Video Thumbnail Overlay

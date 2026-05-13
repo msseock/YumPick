@@ -42,7 +42,7 @@ final class CommunityViewModel {
     private let locationManager: any LocationManagerProtocol
 
     init(
-        client: CommunityClientProtocol = CommunityClient(),
+        client: CommunityClientProtocol = FixtureClientFactory.communityClient(),
         locationManager: any LocationManagerProtocol = LocationManager.shared
     ) {
         self.client = client

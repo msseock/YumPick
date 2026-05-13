@@ -13,7 +13,7 @@ final class VideoListViewModel {
     private var hasLoaded: Bool = false
     private let client: VideoClientProtocol
 
-    init(client: VideoClientProtocol = VideoClient()) {
+    init(client: VideoClientProtocol = FixtureClientFactory.videoClient()) {
         self.client = client
     }
 

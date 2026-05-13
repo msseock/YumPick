@@ -30,7 +30,7 @@ struct Video: Codable, Identifiable, Hashable {
     }
 }
 
-struct VideoPage: Hashable {
+struct VideoPage: Codable, Hashable {
     let videos: [Video]
     let nextCursor: String?
 }

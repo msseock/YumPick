@@ -25,7 +25,7 @@ final class StoreDetailViewModel {
 
     init(
         storeId: String,
-        client: StoreDetailClientProtocol = StoreDetailClient(),
+        client: StoreDetailClientProtocol = FixtureClientFactory.storeDetailClient(),
         locationManager: any LocationManagerProtocol = LocationManager.shared
     ) {
         self.storeId = storeId
