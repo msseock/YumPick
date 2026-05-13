@@ -249,16 +249,17 @@ final class FixtureCaptureService {
         rewritten.failures.forEach {
             manifest.records.append(FixtureCaptureRecord(name: "asset:\(path)", status: .failure, message: $0))
         }
-        try writeData(rewritten.data, to: path)
+        try writeData(rewritten.data, to: path, underDataDirectory: true)
     }
 
     private func writeRawPayload<T: Encodable>(_ value: T, to path: String) async throws {
-        try writeData(FixtureLoader.encoder.encode(value), to: path)
+        try writeData(FixtureLoader.encoder.encode(value), to: path, underDataDirectory: false)
     }
 
-    private func writeData(_ data: Data, to path: String) throws {
+    private func writeData(_ data: Data, to path: String, underDataDirectory: Bool) throws {
         guard let root = snapshotRoot else { return }
-        let target = root.appendingPathComponent(path).appendingPathExtension("json")
+        let base = underDataDirectory ? root.appendingPathComponent("data", isDirectory: true) : root
+        let target = base.appendingPathComponent(path).appendingPathExtension("json")
         try fileManager.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
         try data.write(to: target, options: [.atomic])
     }

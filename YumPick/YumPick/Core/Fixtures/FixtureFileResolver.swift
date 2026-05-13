@@ -6,6 +6,7 @@ enum FixtureFileResolver {
 
     static var usesFixtures: Bool {
         ProcessInfo.processInfo.arguments.contains("-useFixtures")
+            || FixtureRuntimeStore.hasActiveFixture
     }
 
     static func fixtureAssetPath(fileName: String) -> String {
@@ -23,6 +24,10 @@ enum FixtureFileResolver {
 
         let fileName = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         guard !fileName.isEmpty else { return nil }
+
+        if let runtimeURL = FixtureRuntimeStore.assetURL(fileName: fileName) {
+            return runtimeURL
+        }
 
         return Bundle.main.url(
             forResource: fileName,
@@ -61,10 +66,26 @@ enum FixtureFileResolver {
     }
 
     static func dataURL(for path: String) -> URL? {
-        Bundle.main.url(
+        if let runtimeURL = FixtureRuntimeStore.dataURL(for: path) {
+            return runtimeURL
+        }
+
+        return Bundle.main.url(
             forResource: path,
             withExtension: "json",
             subdirectory: "Fixtures/data"
         )
+    }
+
+    static func dataURLs(in directory: String) -> [URL] {
+        let runtimeURLs = FixtureRuntimeStore.dataURLs(in: directory)
+        if !runtimeURLs.isEmpty {
+            return runtimeURLs
+        }
+
+        return Bundle.main.urls(
+            forResourcesWithExtension: "json",
+            subdirectory: "Fixtures/data/\(directory)"
+        ) ?? []
     }
 }

@@ -8,7 +8,7 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if !networkMonitor.isConnected {
+            if shouldBlockForNetworkUnavailable {
                 NetworkUnavailableView(isRetrying: false) {
                     Task { await resolveNetworkAvailableWork() }
                 }
@@ -32,11 +32,11 @@ struct RootView: View {
             await resolveNetworkAvailableWork()
         }
         .onChange(of: networkMonitor.isConnected) { _, isConnected in
-            guard isConnected else { return }
+            guard isConnected, !FixtureFileResolver.usesFixtures else { return }
             Task { await resolveNetworkAvailableWork() }
         }
         .onChange(of: scenePhase) { _, phase in
-            guard phase == .active else { return }
+            guard phase == .active, !FixtureFileResolver.usesFixtures else { return }
             Task { await resolveNetworkAvailableWork() }
         }
         .onChange(of: authSession.state, initial: true) { _, newState in
@@ -44,7 +44,12 @@ struct RootView: View {
         }
     }
 
+    private var shouldBlockForNetworkUnavailable: Bool {
+        !FixtureFileResolver.usesFixtures && !networkMonitor.isConnected
+    }
+
     private func resolveNetworkAvailableWork() async {
+        guard !FixtureFileResolver.usesFixtures else { return }
         guard networkMonitor.isConnected else { return }
 
         let shouldBlockUI = authSession.state == .logoutRequired

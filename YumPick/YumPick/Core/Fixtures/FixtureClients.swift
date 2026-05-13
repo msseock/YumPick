@@ -273,8 +273,7 @@ private func fixtureSafeName(_ value: String) -> String {
 }
 
 private func firstFixturePath(in directory: String, prefix: String) throws -> String {
-    let subdirectory = "Fixtures/data/\(directory)"
-    let urls = Bundle.main.urls(forResourcesWithExtension: "json", subdirectory: subdirectory) ?? []
+    let urls = FixtureFileResolver.dataURLs(in: directory)
     guard let url = urls.first(where: { $0.deletingPathExtension().lastPathComponent.hasPrefix(prefix) }) else {
         throw FixtureError.missingFixture("\(directory)/\(prefix)*")
     }

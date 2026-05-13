@@ -44,6 +44,11 @@ final class AuthSession {
     }
 
     func restore() async {
+        if FixtureFileResolver.usesFixtures {
+            restoreFixtureSession()
+            return
+        }
+
         if isLogoutRequired {
             restoreCachedUser()
             state = .logoutRequired
@@ -186,6 +191,18 @@ final class AuthSession {
     private func restoreCachedUser() {
         self.userID = keychain.read(key: .userID)
         self.nick = keychain.read(key: .nick)
+    }
+
+    private func restoreFixtureSession() {
+        restoreCachedUser()
+
+        let fixtureUserID = userID ?? "fixture-user"
+        let fixtureNick = nick ?? "Fixture User"
+        self.userID = fixtureUserID
+        self.nick = fixtureNick
+        sessionMessage = nil
+        UserSession.shared.set(userID: fixtureUserID, nick: fixtureNick)
+        state = .authenticated
     }
 
     private func markLogoutRequired(message: String) {
