@@ -9,41 +9,64 @@ struct YPBannerCarousel: View {
 
     private let defaultAspectRatio: CGFloat = 390 / 140
 
+    /// 배너 높이 상한. 이미지 종횡비에 따라 계산하되 hero 섹션과 겹치지 않도록 상한선을 둔다.
+    private let maxBannerHeight: CGFloat = 200
+
     var body: some View {
-        if banners.isEmpty {
-            YPColor.backgroundSecondary
-                .frame(maxWidth: .infinity)
-                .aspectRatio(defaultAspectRatio, contentMode: .fit)
-        } else {
-            TabView(selection: $currentPage) {
-                ForEach(Array(banners.enumerated()), id: \.offset) { index, banner in
-                    Button {
-                        onBannerTapped(banner)
-                    } label: {
-                        CachedImage(path: banner.imageUrl) { imageSize in
-                            updateAspectRatio(for: index, imageSize: imageSize)
+        GeometryReader { proxy in
+            ZStack {
+                if banners.isEmpty {
+                    YPColor.backgroundSecondary
+                } else {
+                    TabView(selection: $currentPage) {
+                        ForEach(Array(banners.enumerated()), id: \.offset) { index, banner in
+                            Button {
+                                onBannerTapped(banner)
+                            } label: {
+                                CachedImage(path: banner.imageUrl) { imageSize in
+                                    updateAspectRatio(for: index, imageSize: imageSize)
+                                }
+                                .frame(width: proxy.size.width, height: proxy.size.height)
+                                .clipped()
+                            }
+                            .frame(width: proxy.size.width, height: proxy.size.height)
+                            .clipped()
+                            .buttonStyle(.plain)
+                            .tag(index)
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .clipped()
                     }
-                    .buttonStyle(.plain)
-                    .tag(index)
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .tabViewStyle(.page(indexDisplayMode: .never))
                 }
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .aspectRatio(currentAspectRatio, contentMode: .fit)
+            .frame(width: proxy.size.width, height: proxy.size.height)
+            .clipped()
             .overlay(alignment: .bottomTrailing) {
-                Text(bannerIndexText)
-                    .font(YPFont.caption1)
-                    .foregroundStyle(YPColor.backgroundPrimary)
-                    .padding(.horizontal, 8)
-                    .frame(height: 24)
-                    .background(YPColor.gray90.opacity(0.55))
-                    .clipShape(Capsule())
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 8)
+                if !banners.isEmpty {
+                    Text(bannerIndexText)
+                        .font(YPFont.caption1)
+                        .foregroundStyle(YPColor.backgroundPrimary)
+                        .padding(.horizontal, 8)
+                        .frame(height: 24)
+                        .background(YPColor.gray90.opacity(0.55))
+                        .clipShape(Capsule())
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 8)
+                }
             }
         }
+        .frame(maxWidth: .infinity)
+        .frame(height: bannerHeight)
+        .clipped()
+        .mask(Rectangle())
+    }
+
+    /// 화면 폭을 기준으로 현재 배너의 종횡비에 맞춰 명시적 높이를 계산하되,
+    /// 비정상적으로 길쭉한 이미지가 와도 hero 섹션과 겹치지 않도록 상한을 둔다.
+    private var bannerHeight: CGFloat {
+        let width = UIScreen.main.bounds.width
+        let computed = width / currentAspectRatio
+        return min(max(computed, 80), maxBannerHeight)
     }
 
     private var currentAspectRatio: CGFloat {
