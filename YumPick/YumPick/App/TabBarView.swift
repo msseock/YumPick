@@ -36,10 +36,10 @@ struct TabBarView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             if shouldShowTabBar {
-                YPTabBar(selectedTab: $router.selectedTab)
+                YP2TabBar(selectedTab: $router.selectedTab)
             }
         }
         .ignoresSafeArea(.container, edges: .bottom)
-        .background(YPColor.backgroundPrimary)
+        .background(YP2Color.backgroundPrimary)
     }
 }

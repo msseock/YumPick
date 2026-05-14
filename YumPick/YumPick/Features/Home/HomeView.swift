@@ -24,19 +24,18 @@ struct HomeView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 0) {
                             headerSection
-                            categoryFilterSection
-                            popularStoresSection
+                            categoryTabsSection
                             bannerSection
+                            heroSection
+                            popularStoresSection
                             pickupStoresSection(scrollProxy: scrollProxy)
                         }
                     }
                     .simultaneousGesture(
                         DragGesture(minimumDistance: 10)
-                            .onChanged { _ in
-                                armNearbyPagination()
-                            }
+                            .onChanged { _ in armNearbyPagination() }
                     )
-                    .background(YPColor.backgroundBrandSubtle)
+                    .background(YP2Color.paper)
                 }
             }
         }
@@ -55,178 +54,265 @@ struct HomeView: View {
     // MARK: - Header
 
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            currentLocationRow
-            searchBarSection
-            popularSearchesSection
-        }
-        .padding(.top, 18)
-        .padding(.bottom, 12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 20)
-        .background(YPColor.backgroundBrandSubtle)
-    }
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("YUMPICK")
+                    .font(.custom("Pretendard-Bold", size: 34))
+                    .foregroundStyle(YP2Color.ink)
 
-    private var currentLocationRow: some View {
-        HStack(spacing: 8) {
-            Image("Location")
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 22, height: 22)
-                .foregroundStyle(YPColor.textPrimary)
-
-            Text(viewModel.currentLocationTitle)
-                .font(YPFont.body1Bold)
-                .foregroundStyle(YPColor.textPrimary)
-                .lineLimit(1)
-
-            Spacer()
-        }
-        .frame(height: 28)
-    }
-
-    private var searchBarSection: some View {
-        HStack(spacing: 8) {
-            Image("Search")
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 20, height: 20)
-                .foregroundStyle(YPColor.textTertiary)
-
-            Text("검색어를 입력해주세요.")
-                .font(YPFont.body2)
-                .foregroundStyle(YPColor.textTertiary)
-
-            Spacer()
-        }
-        .padding(.horizontal, 14)
-        .frame(height: 44)
-        .background(YPColor.backgroundPrimary)
-        .overlay(
-            RoundedRectangle(cornerRadius: 22)
-                .stroke(YPColor.brandDeepSprout, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 22))
-    }
-
-    private var popularSearchesSection: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                Text("✦ 인기검색어")
+                Text(viewModel.currentLocationTitle)
                     .font(YPFont.caption1)
-                    .foregroundStyle(YPColor.brandDeepSprout)
-
-                ForEach(Array(viewModel.popularSearches.prefix(5)), id: \.self) { keyword in
-                    Text(keyword)
-                        .font(YPFont.caption1)
-                        .foregroundStyle(YPColor.brandBlackSprout)
-                }
+                    .foregroundStyle(YP2Color.textSecondary)
+                    .lineLimit(1)
             }
-        }
-        .frame(height: 16)
-    }
 
-    // MARK: - Category Filter
+            Spacer()
 
-    private var categoryFilterSection: some View {
-        HStack(alignment: .top, spacing: 16) {
-            ForEach(HomePopularCategory.allCases) { category in
-                popularCategoryButton(category)
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 20)
-        .padding(.bottom, 18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(YPColor.backgroundPrimary)
-    }
-
-    private func popularCategoryButton(_ category: HomePopularCategory) -> some View {
-        let isSelected = viewModel.selectedPopularCategory == category
-
-        return Button {
-            Task {
-                await viewModel.selectPopularCategory(category)
-            }
-        } label: {
-            VStack(spacing: 8) {
-                Image(category.imageName)
+            HStack(spacing: 16) {
+                Image(systemName: "magnifyingglass")
                     .resizable()
                     .scaledToFit()
-                    .padding(12)
-                    .frame(width: 56, height: 56)
-                    .background(YPColor.gray0)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(
-                                isSelected ? YPColor.brandBlackSprout : YPColor.gray30,
-                                lineWidth: isSelected ? 1.5 : 1
-                            )
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .frame(width: 24, height: 24)
+                    .foregroundStyle(YP2Color.ink)
 
-                Text(category.title)
-                    .font(YPFont.body3)
-                    .foregroundStyle(isSelected ? YPColor.brandBlackSprout : YPColor.textTertiary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                    .frame(width: 64)
+                Image(systemName: "bag")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 24, height: 24)
+                    .foregroundStyle(YP2Color.ink)
             }
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .frame(maxWidth: .infinity)
+        .background(YP2Color.paper)
     }
 
-    // MARK: - Popular Stores
+    // MARK: - Category Tabs
 
-    private var popularStoresSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("실시간 인기 맛집")
-                .font(YPFont.body1Bold)
-                .foregroundStyle(YPColor.textPrimary)
-                .padding(.horizontal, 20)
-
+    private var categoryTabsSection: some View {
+        VStack(spacing: 0) {
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 12) {
-                    ForEach(viewModel.popularStores) { store in
-                        NavigationLink(value: HomePath.storeDetail(storeId: store.store_id)) {
-                            YPPopularShopCard(
-                                imagePath: store.store_image_urls?.first,
-                                shopName: store.name ?? "",
-                                pickupCount: store.pick_count ?? 0,
-                                distance: store.distance.map { formattedDistance($0) } ?? "",
-                                closeTime: store.close ?? "",
-                                visitCount: store.total_order_count ?? 0,
-                                isLiked: LikeStateStore.shared.isLiked(
-                                    for: store.store_id,
-                                    fallback: store.is_pick ?? false
-                                ),
-                                isPickchelin: store.is_picchelin ?? false,
-                                onLikeTapped: {
-                                    Task { await viewModel.toggleLike(storeId: store.store_id) }
-                                }
-                            )
+                HStack(spacing: 22) {
+                    categoryTab(
+                        title: "NOW",
+                        isSelected: viewModel.selectedPopularCategory == nil
+                    ) {
+                        Task { await viewModel.selectPopularCategory(.more) }
+                    }
+                    ForEach(HomePopularCategory.allCases.filter { $0 != .more }) { category in
+                        categoryTab(
+                            title: category.title,
+                            isSelected: viewModel.selectedPopularCategory == category
+                        ) {
+                            Task { await viewModel.selectPopularCategory(category) }
                         }
-                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+            }
+
+            Rectangle()
+                .fill(YP2Color.borderDefault)
+                .frame(height: 1)
+        }
+        .background(YP2Color.paper)
+    }
+
+    private func categoryTab(title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                Text(title)
+                    .font(.custom("Pretendard-Bold", size: 16))
+                    .foregroundStyle(isSelected ? YP2Color.ink : YP2Color.textTertiary)
+
+                Rectangle()
+                    .fill(isSelected ? YP2Color.ink : Color.clear)
+                    .frame(width: 44, height: 3)
             }
         }
-        .padding(.bottom, 24)
-        .background(YPColor.backgroundPrimary)
+        .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
     }
 
     // MARK: - Banner
 
     private var bannerSection: some View {
-        YPBannerCarousel(banners: viewModel.banners) { banner in
-            bannerWebViewRoute = viewModel.webViewRoute(for: banner)
+        VStack(spacing: 0) {
+            YPBannerCarousel(banners: viewModel.banners) { banner in
+                bannerWebViewRoute = viewModel.webViewRoute(for: banner)
+            }
+
+            Rectangle()
+                .fill(YP2Color.paper)
+                .frame(height: 12)
+        }
+        .background(YP2Color.paper)
+        .zIndex(0)
+    }
+
+    // MARK: - Hero (오늘의 픽업)
+
+    @ViewBuilder
+    private var heroSection: some View {
+        if let store = viewModel.nearbyStores.first {
+            NavigationLink(value: HomePath.storeDetail(storeId: store.store_id)) {
+                GeometryReader { proxy in
+                    ZStack {
+                        CachedImage(path: store.store_image_urls?.first)
+                            .frame(width: proxy.size.width, height: proxy.size.height)
+                            .clipped()
+
+                        LinearGradient(
+                            colors: [
+                                .black.opacity(0.45),
+                                .clear,
+                                .black.opacity(0.65)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .frame(width: proxy.size.width, height: proxy.size.height)
+
+                        VStack(alignment: .leading, spacing: 0) {
+                            HStack {
+                                Text("오늘의 픽업")
+                                    .font(.custom("Pretendard-Bold", size: 14))
+                                    .foregroundStyle(YP2Color.paper)
+                                Spacer()
+                            }
+
+                            Spacer()
+
+                            HStack(alignment: .bottom, spacing: 12) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(store.name ?? "")
+                                        .font(.custom("Pretendard-Bold", size: 26))
+                                        .foregroundStyle(YP2Color.paper)
+                                        .lineLimit(2)
+                                        .multilineTextAlignment(.leading)
+
+                                    if let closeTime = store.close, !closeTime.isEmpty {
+                                        Text(closeTime + " 마감")
+                                            .font(.custom("Pretendard-Bold", size: 13))
+                                            .foregroundStyle(YP2Color.paper.opacity(0.95))
+                                    }
+                                }
+
+                                Spacer()
+
+                                Text("바로보기")
+                                    .font(.custom("Pretendard-Bold", size: 13))
+                                    .foregroundStyle(YP2Color.ink)
+                                    .frame(width: 108, height: 40)
+                                    .background(YP2Color.order)
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 18)
+                    }
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .clipped()
+                }
+                .frame(height: 238)
+                .clipped()
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .zIndex(1)
         }
     }
 
-    // MARK: - Pickup Stores
+    // MARK: - Popular Stores (실시간 인기 맛집)
+
+    private var popularStoresSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("실시간 인기 맛집")
+                    .font(.custom("Pretendard-Bold", size: 22))
+                    .foregroundStyle(YP2Color.ink)
+
+                Spacer()
+
+                Text("전체")
+                    .font(YPFont.caption1)
+                    .foregroundStyle(YP2Color.textTertiary)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 14)
+
+            let stores = viewModel.popularStores
+            VStack(spacing: 10) {
+                ForEach(Array(stride(from: 0, to: stores.count, by: 2)), id: \.self) { index in
+                    HStack(spacing: 10) {
+                        popularStoreCard(stores[index])
+                        if index + 1 < stores.count {
+                            popularStoreCard(stores[index + 1])
+                        } else {
+                            Color.clear
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 140)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 24)
+        }
+        .background(YP2Color.paper)
+    }
+
+    private func popularStoreCard(_ store: StoreSummary) -> some View {
+        NavigationLink(value: HomePath.storeDetail(storeId: store.store_id)) {
+            ZStack(alignment: .bottomLeading) {
+                CachedImage(path: store.store_image_urls?.first)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 140)
+                    .clipped()
+
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.7)],
+                    startPoint: .center,
+                    endPoint: .bottom
+                )
+                .frame(maxWidth: .infinity)
+                .frame(height: 140)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(store.name ?? "")
+                        .font(.custom("Pretendard-Bold", size: 14))
+                        .foregroundStyle(YP2Color.paper)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+
+                    Text("\(store.pick_count ?? 0) 픽업")
+                        .font(.custom("Pretendard-Bold", size: 12))
+                        .foregroundStyle(YP2Color.order)
+                }
+                .padding(.horizontal, 10)
+                .padding(.bottom, 10)
+
+                if store.is_picchelin ?? false {
+                    VStack {
+                        HStack {
+                            YP2PickchelinBadge()
+                            Spacer()
+                        }
+                        Spacer()
+                    }
+                    .padding(8)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 140)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Pickup Stores (내 픽업 가게)
 
     private func pickupStoresSection(scrollProxy: ScrollViewProxy) -> some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -236,15 +322,15 @@ struct HomeView: View {
 
             HStack {
                 Text("내가 픽업 가게")
-                    .font(YPFont.body1Bold)
-                    .foregroundStyle(YPColor.textPrimary)
+                    .font(.custom("Pretendard-Bold", size: 22))
+                    .foregroundStyle(YP2Color.ink)
 
                 Spacer()
 
                 sortButton(scrollProxy: scrollProxy)
             }
             .padding(.horizontal, 20)
-            .padding(.top, 16)
+            .padding(.top, 20)
 
             HStack(spacing: 12) {
                 pickupFilterButton(
@@ -261,13 +347,13 @@ struct HomeView: View {
             }
             .padding(.horizontal, 20)
             .padding(.top, 12)
-            .padding(.bottom, 12)
-            .background(YPColor.backgroundPrimary)
+            .padding(.bottom, 8)
+            .background(YP2Color.paper)
             .zIndex(1)
 
             pickupStoreList
         }
-        .background(YPColor.backgroundPrimary)
+        .background(YP2Color.paper)
     }
 
     private func sortButton(scrollProxy: ScrollViewProxy) -> some View {
@@ -281,15 +367,15 @@ struct HomeView: View {
         } label: {
             HStack(spacing: 4) {
                 Text(viewModel.nearbySort.title)
-                    .font(YPFont.body3)
-                    .foregroundStyle(YPColor.brandBlackSprout)
+                    .font(.custom("Pretendard-Bold", size: 13))
+                    .foregroundStyle(YP2Color.ink)
 
                 Image("List")
                     .renderingMode(.template)
                     .resizable()
                     .scaledToFit()
                     .frame(width: 16, height: 16)
-                    .foregroundStyle(YPColor.brandBlackSprout)
+                    .foregroundStyle(YP2Color.ink)
             }
         }
         .buttonStyle(.plain)
@@ -307,8 +393,8 @@ struct HomeView: View {
                 YPCheckBox(isChecked: isSelected)
 
                 Text(title)
-                    .font(YPFont.body3)
-                    .foregroundStyle(isSelected ? YPColor.brandBlackSprout : YPColor.textTertiary)
+                    .font(.custom("Pretendard-Bold", size: 13))
+                    .foregroundStyle(isSelected ? YP2Color.ink : YP2Color.textTertiary)
             }
             .padding(.vertical, 4)
             .contentShape(Rectangle())
@@ -324,15 +410,15 @@ struct HomeView: View {
                     .padding(.vertical, 32)
             } else if viewModel.filteredNearbyStores.isEmpty {
                 Text("조건에 맞는 가게가 없어요.")
-                    .font(YPFont.body3)
-                    .foregroundStyle(YPColor.textTertiary)
+                    .font(.custom("Pretendard-Medium", size: 13))
+                    .foregroundStyle(YP2Color.textTertiary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 32)
             }
 
             ForEach(viewModel.filteredNearbyStores) { store in
                 NavigationLink(value: HomePath.storeDetail(storeId: store.store_id)) {
-                    HomePickupStoreRow(
+                    YP2PickupStoreCard(
                         store: store,
                         isLiked: LikeStateStore.shared.isLiked(
                             for: store.store_id,
@@ -345,7 +431,9 @@ struct HomeView: View {
                 }
                 .buttonStyle(.plain)
 
-                YPDivider()
+                Rectangle()
+                    .fill(YP2Color.borderDefault)
+                    .frame(height: 1)
                     .padding(.horizontal, 20)
             }
 
@@ -390,12 +478,5 @@ struct HomeView: View {
                 nearbyPaginationTask = nil
             }
         }
-    }
-
-    private func formattedDistance(_ distance: Double) -> String {
-        if distance >= 1000 {
-            return String(format: "%.1fkm", distance / 1000)
-        }
-        return String(format: "%.0fm", distance)
     }
 }
