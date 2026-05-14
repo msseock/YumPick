@@ -50,7 +50,14 @@ enum FixtureFileResolver {
 
         let base = SecretConstants.baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         let normalized = trimmed.hasPrefix("/") ? trimmed : "/\(trimmed)"
-        let apiPath = normalized.hasPrefix("/data/") ? "/v1\(normalized)" : normalized
+        let apiPath: String
+        if normalized.hasPrefix("/v1/") {
+            apiPath = normalized
+        } else if normalized.hasPrefix("/data/") || normalized.hasPrefix("/videos/stream/") {
+            apiPath = "/v1\(normalized)"
+        } else {
+            apiPath = normalized
+        }
         return URL(string: base + apiPath)
     }
 
