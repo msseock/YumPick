@@ -5,10 +5,17 @@ struct VideoDetailView: View {
     @State private var showsControls = true
     @State private var isFullscreen = false
 
+    private let relatedVideos: [Video]
     private let onDismiss: () -> Void
 
-    init(video: Video, onDismiss: @escaping () -> Void) {
+    private let relatedGridColumns = [
+        GridItem(.flexible(minimum: 0), spacing: 10),
+        GridItem(.flexible(minimum: 0), spacing: 10)
+    ]
+
+    init(video: Video, relatedVideos: [Video] = [], onDismiss: @escaping () -> Void) {
         _viewModel = State(initialValue: VideoDetailViewModel(video: video))
+        self.relatedVideos = relatedVideos
         self.onDismiss = onDismiss
     }
 
@@ -40,57 +47,112 @@ struct VideoDetailView: View {
     // MARK: - Portrait layout
 
     private var portraitContent: some View {
-        VStack(spacing: 0) {
-            ZStack(alignment: .topTrailing) {
-                playerSection
-                    .background(Color.black)
-                    .frame(maxWidth: .infinity)
-                    .aspectRatio(16.0 / 9.0, contentMode: .fit)
+        GeometryReader { proxy in
+            VStack(spacing: 0) {
+                ZStack(alignment: .topTrailing) {
+                    playerSection
+                        .background(Color.black)
+                        .frame(width: proxy.size.width)
+                        .aspectRatio(16.0 / 9.0, contentMode: .fit)
 
-                Button { onDismiss() } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .padding(7)
-                        .background(Color.black.opacity(0.55))
-                        .clipShape(Circle())
-                }
-                .padding(10)
-            }
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(viewModel.video.title)
-                        .font(YPFont.title1)
-                        .foregroundStyle(YPColor.textPrimary)
-
-                    HStack(spacing: 12) {
-                        Label("\(viewModel.video.view_count)", systemImage: "eye")
-                        Button {
-                            Task { await viewModel.toggleLike() }
-                        } label: {
-                            Label("\(viewModel.likeCount)", systemImage: viewModel.isLiked ? "heart.fill" : "heart")
-                                .foregroundStyle(viewModel.isLiked ? YPColor.actionAccent : YPColor.textSecondary)
-                        }
-                        .buttonStyle(.plain)
-                        Spacer()
-                        if !viewModel.availableSubtitles.isEmpty { subtitleMenu }
-                        if !viewModel.availableQualities.isEmpty { qualityMenu }
+                    Button { onDismiss() } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .padding(8)
+                            .background(YP2Color.ink.opacity(0.55))
+                            .clipShape(Circle())
                     }
-                    .font(YPFont.caption1)
-                    .foregroundStyle(YPColor.textSecondary)
-
-                    Divider()
-
-                    Text(viewModel.video.description)
-                        .font(YPFont.body2)
-                        .foregroundStyle(YPColor.textSecondary)
+                    .padding(12)
                 }
-                .padding(16)
+
+                ScrollView(.vertical) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        titleBlock
+                        actionRow
+                        Rectangle()
+                            .fill(YP2Color.borderDefault)
+                            .frame(height: 1)
+                        descriptionBlock
+                        relatedVideosSection
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 20)
+                    .padding(.bottom, 32)
+                    .frame(width: proxy.size.width, alignment: .leading)
+                }
+                .background(YP2Color.paper)
             }
-            .background(YPColor.backgroundPrimary)
+            .background(YP2Color.paper)
         }
-        .background(YPColor.backgroundPrimary)
+    }
+
+    private var titleBlock: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(viewModel.video.title)
+                .font(.custom("Pretendard-Bold", size: 22))
+                .foregroundStyle(YP2Color.ink)
+                .multilineTextAlignment(.leading)
+
+            Text("조회 \(formattedViewCount(viewModel.video.view_count)) · \(formattedDuration(viewModel.video.duration))")
+                .font(.custom("Pretendard-Medium", size: 13))
+                .foregroundStyle(YP2Color.textSecondary)
+        }
+    }
+
+    private var actionRow: some View {
+        HStack(spacing: 8) {
+            likeChip
+
+            Spacer()
+
+            if !viewModel.availableSubtitles.isEmpty { subtitleMenu }
+            if !viewModel.availableQualities.isEmpty { qualityMenu }
+        }
+    }
+
+    private var likeChip: some View {
+        Button {
+            Task { await viewModel.toggleLike() }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: viewModel.isLiked ? "heart.fill" : "heart")
+                    .font(.system(size: 14, weight: .semibold))
+                Text("\(viewModel.likeCount)")
+                    .font(.custom("Pretendard-Bold", size: 13))
+            }
+            .foregroundStyle(viewModel.isLiked ? YP2Color.order : YP2Color.ink)
+            .padding(.horizontal, 14)
+            .frame(height: 36)
+            .background(viewModel.isLiked ? YP2Color.ink : YP2Color.fog)
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var descriptionBlock: some View {
+        Text(viewModel.video.description)
+            .font(.custom("Pretendard-Medium", size: 14))
+            .foregroundStyle(YP2Color.textPrimary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var relatedVideosSection: some View {
+        if !relatedVideos.isEmpty {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("다른 영상도 보기")
+                    .font(.custom("Pretendard-Bold", size: 18))
+                    .foregroundStyle(YP2Color.ink)
+
+                LazyVGrid(columns: relatedGridColumns, spacing: 10) {
+                    ForEach(relatedVideos) { video in
+                        YP2VideoShortCard(video: video)
+                    }
+                }
+            }
+            .padding(.top, 8)
+        }
     }
 
     // MARK: - Fullscreen layout
@@ -117,7 +179,7 @@ struct VideoDetailView: View {
 
             switch viewModel.loadState {
             case .idle, .loading:
-                ProgressView().tint(YPColor.gray0)
+                ProgressView().tint(.white)
             case .failed(let message):
                 errorOverlay(message: message)
             case .ready:
@@ -132,10 +194,10 @@ struct VideoDetailView: View {
                         Spacer()
                         Button { exitFullscreen() } label: {
                             Image(systemName: "xmark")
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundStyle(YPColor.gray0)
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(.white)
                                 .padding(10)
-                                .background(Color.black.opacity(0.5))
+                                .background(YP2Color.ink.opacity(0.55))
                                 .clipShape(Circle())
                         }
                         .padding(20)
@@ -146,7 +208,7 @@ struct VideoDetailView: View {
                         isFullscreen: true,
                         onToggleFullscreen: exitFullscreen
                     )
-                        .padding(.bottom, 8)
+                    .padding(.bottom, 8)
                 }
                 .ignoresSafeArea(.container, edges: .bottom)
             }
@@ -178,7 +240,7 @@ struct VideoDetailView: View {
 
             switch viewModel.loadState {
             case .idle, .loading:
-                ProgressView().tint(YPColor.gray0)
+                ProgressView().tint(.white)
             case .failed(let message):
                 errorOverlay(message: message)
             case .ready:
@@ -204,21 +266,32 @@ struct VideoDetailView: View {
 
     @ViewBuilder
     private func errorOverlay(message: String) -> some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 14) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 32))
-                .foregroundStyle(YPColor.actionAccent)
+                .foregroundStyle(YP2Color.order)
             Text(message)
-                .font(YPFont.caption1)
-                .foregroundStyle(YPColor.gray0)
+                .font(.custom("Pretendard-Medium", size: 13))
+                .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 16)
-            Button("다시 시도") {
+            Button {
                 Task { await viewModel.loadStream() }
+            } label: {
+                Text("다시 시도")
+                    .font(.custom("Pretendard-Bold", size: 14))
+                    .foregroundStyle(YP2Color.ink)
+                    .padding(.horizontal, 22)
+                    .frame(height: 40)
+                    .background(YP2Color.order)
+                    .clipShape(Capsule())
             }
-            .font(YPFont.body3Bold)
-            .foregroundStyle(YPColor.gray0)
+            .buttonStyle(.plain)
         }
+        .padding(20)
+        .background(YP2Color.ink.opacity(0.7))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(.horizontal, 24)
     }
 
     @ViewBuilder
@@ -227,12 +300,12 @@ struct VideoDetailView: View {
             VStack {
                 Spacer()
                 Text(text)
-                    .font(YPFont.body2Bold)
-                    .foregroundStyle(YPColor.gray0)
+                    .font(.custom("Pretendard-Bold", size: 14))
+                    .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(YPColor.gray100.opacity(0.6))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(YP2Color.ink.opacity(0.6))
                     .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                     .padding(.bottom, bottomPadding)
                     .padding(.horizontal, 16)
@@ -283,15 +356,7 @@ struct VideoDetailView: View {
                 Text(viewModel.isSubtitleEnabled ? "자막 끄기" : "자막 켜기")
             }
         } label: {
-            HStack(spacing: 4) {
-                Image(systemName: "captions.bubble")
-                Text(viewModel.selectedSubtitleLanguage ?? "자막")
-            }
-            .font(YPFont.caption1)
-            .foregroundStyle(YPColor.textPrimary)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(YPColor.gray30, lineWidth: 1))
+            chipLabel(icon: "captions.bubble", text: viewModel.selectedSubtitleLanguage ?? "자막")
         }
     }
 
@@ -318,16 +383,25 @@ struct VideoDetailView: View {
                 }
             }
         } label: {
-            HStack(spacing: 4) {
-                Image(systemName: "gearshape")
-                Text(viewModel.selectedQuality ?? "자동")
-            }
-            .font(YPFont.caption1)
-            .foregroundStyle(YPColor.textPrimary)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(YPColor.gray30, lineWidth: 1))
+            chipLabel(icon: "gearshape", text: viewModel.selectedQuality ?? "자동")
         }
+    }
+
+    private func chipLabel(icon: String, text: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .semibold))
+            Text(text)
+                .font(.custom("Pretendard-Bold", size: 12))
+            Image(systemName: "chevron.down")
+                .font(.system(size: 10, weight: .semibold))
+        }
+        .foregroundStyle(YP2Color.ink)
+        .padding(.horizontal, 12)
+        .frame(height: 32)
+        .overlay(
+            Capsule().stroke(YP2Color.borderSubtle, lineWidth: 1)
+        )
     }
 
     // MARK: - Helpers
@@ -343,5 +417,22 @@ struct VideoDetailView: View {
         case .ended: return "ended"
         case .failed: return "failed"
         }
+    }
+
+    private func formattedViewCount(_ count: Int) -> String {
+        if count >= 1_000_000 {
+            return String(format: "%.1fM", Double(count) / 1_000_000)
+        }
+        if count >= 1_000 {
+            return String(format: "%.1fK", Double(count) / 1_000)
+        }
+        return "\(count)"
+    }
+
+    private func formattedDuration(_ seconds: Double) -> String {
+        let total = max(Int(seconds), 0)
+        let m = total / 60
+        let s = total % 60
+        return String(format: "%d:%02d", m, s)
     }
 }
