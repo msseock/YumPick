@@ -7,26 +7,20 @@ struct YPOrderMenuRow: View {
     var quantity: Int
 
     var body: some View {
-        HStack(spacing: 17) {
+        HStack(spacing: 12) {
             CachedImage(path: imagePath)
                 .frame(width: 84, height: 52)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text(name)
                     .font(YPFont.body2Bold)
-                    .foregroundStyle(YPColor.textPrimary)
+                    .foregroundStyle(YP2Color.textPrimary)
                     .lineLimit(1)
 
-                HStack(spacing: 8) {
-                    Text("\(price.formatted())원")
-                        .font(YPFont.body2.weight(.medium))
-                        .foregroundStyle(YPColor.textSecondary)
-
-                    Text("\(quantity)EA")
-                        .font(YPFont.caption1)
-                        .foregroundStyle(YPColor.textTertiary)
-                }
+                Text("\(price.formatted())원    \(quantity)EA")
+                    .font(YPFont.body2)
+                    .foregroundStyle(YP2Color.textSecondary)
             }
 
             Spacer()

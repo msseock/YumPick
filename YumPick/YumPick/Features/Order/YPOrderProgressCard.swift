@@ -39,7 +39,7 @@ struct YPOrderProgressCard: View {
 
     private enum Metrics {
         static let timelineColumnWidth: CGFloat = 180
-        static let timelineColumnHeight: CGFloat = 200
+        static let timelineColumnHeight: CGFloat = 220
         static let timelineHorizontalPadding: CGFloat = 16
         static let timelineVerticalPadding: CGFloat = 17
         static let progressCircleSize: CGFloat = 16
@@ -67,32 +67,26 @@ struct YPOrderProgressCard: View {
         }
         .padding(20)
         .background(YPColor.backgroundPrimary)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(
-            color: Color(red: 123/255, green: 120/255, blue: 134/255).opacity(0.08),
-            radius: 6, x: 0, y: 4
-        )
     }
 
     private var leftColumn: some View {
         VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 4) {
-                Text("주문번호")
-                    .font(YPFont.caption1)
-                    .foregroundStyle(YPColor.textTertiary)
-                Text(orderCode)
-                    .font(YPFont.body3Bold)
-                    .foregroundStyle(YPColor.textSecondary)
-            }
+            Text("주문번호")
+                .font(YPFont.caption1)
+                .foregroundStyle(YP2Color.textTertiary)
+
+            Text(orderCode)
+                .font(YPFont.body3Bold)
+                .foregroundStyle(YP2Color.textSecondary)
 
             Text(shopName)
                 .font(YPFont.title1)
-                .foregroundStyle(YPColor.textPrimary)
+                .foregroundStyle(YP2Color.textPrimary)
                 .lineLimit(2)
 
             Text(paidAt.map { DateFormatManager.shared.orderDate(from: $0) } ?? "")
                 .font(YPFont.caption2)
-                .foregroundStyle(YPColor.textTertiary)
+                .foregroundStyle(YP2Color.textTertiary)
                 .lineLimit(2)
 
             Color.clear
@@ -143,8 +137,11 @@ struct YPOrderProgressCard: View {
             .padding(.vertical, Metrics.timelineVerticalPadding)
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
         }
-        .frame(width: Metrics.timelineColumnWidth, height: Metrics.timelineColumnHeight)
-        .background(YPColor.backgroundSecondary)
+        .frame(
+            width: Metrics.timelineColumnWidth,
+            height: Metrics.timelineColumnHeight
+        )
+        .background(YP2Color.backgroundSecondary)
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
@@ -169,7 +166,7 @@ struct YPOrderProgressCard: View {
             Text(step.label)
                 .font(YPFont.body3Bold)
                 .foregroundStyle(
-                    step.completed ? YPColor.textPrimary : YPColor.textTertiary
+                    step.completed ? YP2Color.textPrimary : YP2Color.textTertiary
                 )
 
             Spacer()
@@ -177,7 +174,7 @@ struct YPOrderProgressCard: View {
             if let time = step.timeLabel {
                 Text(time)
                     .font(YPFont.caption1)
-                    .foregroundStyle(YPColor.textTertiary)
+                    .foregroundStyle(YP2Color.textTertiary)
             }
         }
     }
@@ -196,15 +193,15 @@ struct YPOrderProgressCard: View {
         }
 
         return resolvedSteps[index + 1].completed
-            ? YPColor.brandBlackSprout
-            : YPColor.borderSubtle
+            ? YP2Color.order
+            : YP2Color.borderSubtle
     }
 }
 
 #Preview {
     VStack(spacing: 16) {
         YPOrderProgressCard(
-            orderCode: "A4922",
+            orderCode: "HSYM805536",
             shopName: "새싹 도넛 가게",
             paidAt: "2025-04-22T09:20:00.000Z",
             storeImagePath: nil,

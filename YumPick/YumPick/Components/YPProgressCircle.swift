@@ -7,17 +7,17 @@ struct YPProgressCircle: View {
         ZStack {
             if isFinished {
                 Circle()
-                    .fill(YPColor.brandBlackSprout)
+                    .fill(YP2Color.order)
                     .frame(width: 16, height: 16)
                 Image("Check")
                     .renderingMode(.template)
                     .resizable()
                     .scaledToFit()
                     .frame(width: 10, height: 10)
-                    .foregroundStyle(YPColor.backgroundPrimary)
+                    .foregroundStyle(YP2Color.backgroundPrimary)
             } else {
                 Circle()
-                    .strokeBorder(YPColor.borderSubtle, lineWidth: 4)
+                    .strokeBorder(YP2Color.borderSubtle, lineWidth: 4)
                     .frame(width: 16, height: 16)
             }
         }

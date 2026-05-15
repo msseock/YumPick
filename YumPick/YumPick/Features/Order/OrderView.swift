@@ -21,7 +21,8 @@ struct OrderView: View {
                     VStack(spacing: 0) {
                         PickupNoticeBanner()
                             .padding(.horizontal, 20)
-                            .padding(.vertical, 4)
+                            .padding(.top, 4)
+                            .padding(.bottom, 16)
 
                         CurrentOrderSection(order: viewModel.orders[0]) {
                             Task { await viewModel.advanceStatus(of: viewModel.orders[0]) }
@@ -30,16 +31,20 @@ struct OrderView: View {
 
                         if viewModel.orders.count > 1 {
                             PastOrderSection(orders: Array(viewModel.orders.dropFirst())) { order in
+                                openStoreDetail(for: order)
+                            } onReceiptTapped: { order in
                                 receiptTarget = order
                             } onReviewTapped: { order in
                                 reviewTarget = order
                             }
                         }
                     }
+                    .padding(.bottom, 50)
                 }
                 .refreshable {
                     await viewModel.fetchOrders()
                 }
+                .background(YP2Color.backgroundPrimary)
             }
         }
         .task {
@@ -102,27 +107,32 @@ struct OrderView: View {
             }
         }
     }
+
+    private func openStoreDetail(for order: Order) {
+        guard let storeId = order.store.id else { return }
+        router.homePath.append(.storeDetail(storeId: storeId))
+        router.selectedTab = .home
+    }
 }
 
 // MARK: - Pickup Notice Banner
 
 private struct PickupNoticeBanner: View {
     var body: some View {
-        HStack(spacing: 0) {
-            Spacer()
-            Text("픽업").font(YPFont.body2).foregroundStyle(YPColor.textPrimary)
-            Text("을 하실 때는 ").font(YPFont.body2).foregroundStyle(YPColor.brandDeepSprout)
-            Text("주문번호").font(YPFont.body2).foregroundStyle(YPColor.textPrimary)
-            Text("를 꼭 말씀해주세요!").font(YPFont.body2).foregroundStyle(YPColor.brandDeepSprout)
+        HStack(spacing: 8) {
+            Image(systemName: "megaphone")
+                .font(.system(size: 14, weight: .bold))
+            Text("픽업 시 주문번호를 보여주세요")
+                .font(YPFont.body3Bold)
             Spacer()
         }
-        .padding(.vertical, 9)
-        .background(YPColor.brandBrightSprout)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .shadow(
-            color: Color(red: 82/255, green: 81/255, blue: 86/255).opacity(0.2),
-            radius: 10.5, x: 0, y: 4
-        )
+        .foregroundStyle(YP2Color.textPrimary)
+        .padding(13)
+        .background(YP2Color.actionPrimary)
+        .overlay {
+            Rectangle()
+                .stroke(YP2Color.ink, lineWidth: 1)
+        }
     }
 }
 
@@ -143,44 +153,50 @@ private struct CurrentOrderSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("주문현황")
-                .font(YPFont.body2Bold)
-                .foregroundStyle(YPColor.textTertiary)
+                .font(YPFont.title1)
+                .foregroundStyle(YP2Color.textPrimary)
                 .padding(.horizontal, 20)
 
-            if isActiveOrder {
-                YPOrderProgressCard(
-                    orderCode: order.order_code,
-                    shopName: order.store.name ?? "",
-                    paidAt: order.paidAt,
-                    storeImagePath: order.store.store_image_urls?.first,
-                    timeline: order.order_status_timeline
-                )
-                .padding(.horizontal, 20)
-                #if DEBUG
-                .onTapGesture { onStatusAdvance?() }
-                #endif
-            } else {
-                OrderTerminalCard(
-                    orderCode: order.order_code,
-                    shopName: order.store.name ?? "",
-                    paidAt: order.paidAt,
-                    storeImagePath: order.store.store_image_urls?.first,
-                    status: order.current_order_status
-                )
-                .padding(.horizontal, 20)
+            VStack(spacing: 0) {
+                if isActiveOrder {
+                    YPOrderProgressCard(
+                        orderCode: order.order_code,
+                        shopName: order.store.name ?? "",
+                        paidAt: order.paidAt,
+                        storeImagePath: order.store.store_image_urls?.first,
+                        timeline: order.order_status_timeline
+                    )
+                    #if DEBUG
+                    .onTapGesture { onStatusAdvance?() }
+                    #endif
+                } else {
+                    OrderTerminalCard(
+                        orderCode: order.order_code,
+                        shopName: order.store.name ?? "",
+                        paidAt: order.paidAt,
+                        storeImagePath: order.store.store_image_urls?.first,
+                        status: order.current_order_status
+                    )
+                }
+
+                YP2Color.backgroundSecondary
+                    .frame(height: 8)
+
+                OrderMenuListCard(order: order)
             }
-
-            OrderMenuListCard(order: order)
-                .padding(.horizontal, 20)
+            .background {
+                Rectangle()
+                    .fill(YP2Color.backgroundPrimary)
+                    .shadow(color: YP2Color.ink.opacity(0.08), radius: 6, x: 0, y: 4)
+            }
+            .overlay {
+                Rectangle()
+                    .stroke(YP2Color.ink, lineWidth: 1)
+            }
+            .padding(.horizontal, 20)
         }
         .padding(.vertical, 16)
-        .background(YPColor.backgroundSecondary)
-        .overlay(alignment: .top) {
-            Divider().foregroundStyle(YPColor.borderSubtle)
-        }
-        .overlay(alignment: .bottom) {
-            Divider().foregroundStyle(YPColor.borderSubtle)
-        }
+        .background(YP2Color.backgroundPrimary)
     }
 }
 
@@ -195,11 +211,11 @@ private struct OrderTerminalCard: View {
 
     private var statusInfo: (label: String, color: Color) {
         switch status {
-        case "PICKED_UP":  return ("픽업완료", YPColor.actionPrimary)
+        case "PICKED_UP":  return ("픽업완료", YP2Color.accentGreen)
         case "CANCELED":   return ("주문취소", YPColor.semanticDanger)
-        case "REFUNDED":   return ("환불완료", YPColor.textTertiary)
+        case "REFUNDED":   return ("환불완료", YP2Color.textTertiary)
         case "FAILED":     return ("결제실패", YPColor.semanticDanger)
-        default:           return (status,    YPColor.textTertiary)
+        default:           return (status,    YP2Color.textTertiary)
         }
     }
 
@@ -209,20 +225,20 @@ private struct OrderTerminalCard: View {
                 HStack(spacing: 4) {
                     Text("주문번호")
                         .font(YPFont.caption1)
-                        .foregroundStyle(YPColor.textTertiary)
+                        .foregroundStyle(YP2Color.textTertiary)
                     Text(orderCode)
                         .font(YPFont.body3Bold)
-                        .foregroundStyle(YPColor.textSecondary)
+                        .foregroundStyle(YP2Color.textSecondary)
                 }
 
                 Text(shopName)
                     .font(YPFont.title1)
-                    .foregroundStyle(YPColor.textPrimary)
+                    .foregroundStyle(YP2Color.textPrimary)
                     .lineLimit(2)
 
                 Text(paidAt.map { DateFormatManager.shared.orderDate(from: $0) } ?? "")
                     .font(YPFont.caption2)
-                    .foregroundStyle(YPColor.textTertiary)
+                    .foregroundStyle(YP2Color.textTertiary)
                     .lineLimit(2)
 
                 Spacer(minLength: 0)
@@ -242,12 +258,7 @@ private struct OrderTerminalCard: View {
             }
         }
         .padding(20)
-        .background(YPColor.backgroundPrimary)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(
-            color: Color(red: 123/255, green: 120/255, blue: 134/255).opacity(0.08),
-            radius: 6, x: 0, y: 4
-        )
+        .background(YP2Color.backgroundPrimary)
     }
 }
 
@@ -283,28 +294,23 @@ private struct OrderMenuListCard: View {
             HStack {
                 Text("결제금액")
                     .font(YPFont.body2Bold)
-                    .foregroundStyle(YPColor.textTertiary)
+                    .foregroundStyle(YP2Color.textTertiary)
 
                 Spacer()
 
                 Text("\(totalQuantity)EA")
                     .font(YPFont.caption1)
-                    .foregroundStyle(YPColor.textTertiary)
+                    .foregroundStyle(YP2Color.textTertiary)
                     .padding(.trailing, 8)
 
                 Text("\(Int(order.total_price).formatted())원")
                     .font(YPFont.body1Bold)
-                    .foregroundStyle(YPColor.textPrimary)
+                    .foregroundStyle(YP2Color.textPrimary)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
-        .background(YPColor.backgroundPrimary)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(
-            color: Color(red: 123/255, green: 120/255, blue: 134/255).opacity(0.08),
-            radius: 6, x: 0, y: 4
-        )
+        .background(YP2Color.backgroundPrimary)
     }
 }
 
@@ -312,15 +318,24 @@ private struct OrderMenuListCard: View {
 
 private struct PastOrderSection: View {
     let orders: [Order]
-    var onDetailTapped: (Order) -> Void
+    var onStoreTapped: (Order) -> Void
+    var onReceiptTapped: (Order) -> Void
     var onReviewTapped: (Order) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("이전주문 내역")
-                .font(YPFont.body2Bold)
-                .foregroundStyle(YPColor.textTertiary)
-                .padding(.horizontal, 20)
+            HStack {
+                Text("이전 주문")
+                    .font(YPFont.title1)
+                    .foregroundStyle(YP2Color.textPrimary)
+
+                Spacer()
+
+                Text("\(orders.count)건")
+                    .font(YPFont.caption1)
+                    .foregroundStyle(YP2Color.textTertiary)
+            }
+            .padding(.horizontal, 20)
 
             LazyVStack(spacing: 12) {
                 ForEach(orders) { order in
@@ -332,13 +347,15 @@ private struct PastOrderSection: View {
                         menuNames: order.order_menu_list.compactMap { $0.menu.name },
                         totalPrice: Int(order.total_price),
                         reviewRating: order.review?.rating,
-                        onDetailTapped: { onDetailTapped(order) },
+                        onStoreTapped: { onStoreTapped(order) },
+                        onReceiptTapped: { onReceiptTapped(order) },
                         onReviewTapped: { onReviewTapped(order) }
                     )
                 }
             }
             .padding(.horizontal, 20)
         }
-        .padding(.vertical, 16)
+        .padding(.top, 18)
+        .padding(.bottom, 24)
     }
 }
