@@ -17,7 +17,7 @@ struct CommunityView: View {
             }
         }
         .toolbar(.hidden, for: .navigationBar)
-        .background(YPColor.backgroundPrimary)
+        .background(YP2Color.backgroundPrimary)
         .task {
             guard viewModel.posts.isEmpty else { return }
             await viewModel.fetchBannersIfNeeded()
@@ -32,32 +32,31 @@ struct CommunityView: View {
     private var postList: some View {
         ScrollView {
             VStack(spacing: 0) {
-                topActionBar
+                headerSection
                     .padding(.horizontal, 20)
-                    .padding(.top, 14)
-                    .padding(.bottom, 28)
+                    .padding(.top, 18)
+                    .padding(.bottom, 12)
 
-                timelineHeader
+                searchBarView
                     .padding(.horizontal, 20)
-                    .padding(.bottom, 18)
+                    .padding(.bottom, 16)
 
                 YPBannerCarousel(banners: viewModel.banners) { banner in
                     bannerWebViewRoute = viewModel.webViewRoute(for: banner)
                 }
                 .padding(.bottom, 16)
 
-                YPDivider()
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 14)
-
                 if viewModel.posts.isEmpty {
                     Text("게시글이 없어요.")
                         .font(YPFont.body3)
-                        .foregroundStyle(YPColor.textTertiary)
+                        .foregroundStyle(YP2Color.textMuted)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 48)
                 } else {
-                    LazyVStack(spacing: 18) {
+                    trendCard
+                        .padding(.bottom, 16)
+
+                    LazyVStack(spacing: 16) {
                         ForEach(viewModel.posts) { post in
                             NavigationLink(value: CommunityPath.detail(postId: post.post_id)) {
                                 PostCard(
@@ -72,6 +71,11 @@ struct CommunityView: View {
                                 )
                             }
                             .buttonStyle(.plain)
+                            .padding(.horizontal, 20)
+
+                            if post.post_id == viewModel.posts.first?.post_id {
+                                miniPromoCard
+                            }
                         }
 
                         if viewModel.canLoadMore {
@@ -93,7 +97,6 @@ struct CommunityView: View {
                                 .padding(.vertical, 18)
                         }
                     }
-                    .padding(.horizontal, 20)
                     .padding(.bottom, 24)
                 }
             }
@@ -108,54 +111,59 @@ struct CommunityView: View {
         }
     }
 
-    private var topActionBar: some View {
-        HStack(spacing: 10) {
-            NavigationLink(value: CommunityPath.search) {
-                HStack(spacing: 10) {
-                    Image("Search")
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 20, height: 20)
-                        .foregroundStyle(YPColor.brandBlackSprout)
+    private var headerSection: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text("LOCAL PICK")
+                    .font(.custom("Pretendard-Bold", size: 12))
+                    .foregroundStyle(YP2Color.textMuted)
 
-                    Text("검색어를 입력해주세요.")
-                        .font(YPFont.body2)
-                        .foregroundStyle(YPColor.textTertiary)
-
-                    Spacer()
-                }
-                .padding(.horizontal, 16)
-                .frame(height: 40)
-                .background(YPColor.backgroundPrimary)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(YPColor.brandBlackSprout, lineWidth: 1)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 20))
+                Text("동네 음식 후기")
+                    .font(.custom("Pretendard-Bold", size: 30))
+                    .foregroundStyle(YP2Color.textPrimary)
             }
-            .buttonStyle(.plain)
+
+            Spacer()
 
             NavigationLink(value: CommunityPath.compose(.create)) {
-                Image("Write")
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 24, height: 24)
-                    .foregroundStyle(YPColor.backgroundPrimary)
-                    .frame(width: 40, height: 40)
-                    .background(YPColor.brandBlackSprout)
+                Image(systemName: "plus")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundStyle(YP2Color.ink)
+                    .frame(width: 46, height: 46)
+                    .background(YP2Color.order)
                     .clipShape(Circle())
             }
             .buttonStyle(.plain)
         }
     }
 
-    private var timelineHeader: some View {
+    private var searchBarView: some View {
+        NavigationLink(value: CommunityPath.search) {
+            HStack(spacing: 10) {
+                Image(systemName: "magnifyingglass")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 20, height: 20)
+                    .foregroundStyle(YP2Color.textMuted)
+
+                Text("가게, 메뉴, 후기 검색")
+                    .font(.custom("Pretendard-Bold", size: 14))
+                    .foregroundStyle(YP2Color.textMuted)
+
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 48)
+            .background(YP2Color.fog)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var sortRow: some View {
         HStack {
             Text("타임라인")
                 .font(YPFont.body1Bold)
-                .foregroundStyle(YPColor.textPrimary)
+                .foregroundStyle(YP2Color.textPrimary)
 
             Spacer()
 
@@ -166,19 +174,85 @@ struct CommunityView: View {
                 HStack(spacing: 4) {
                     Text(viewModel.orderBy.label)
                         .font(YPFont.body3)
-                        .foregroundStyle(YPColor.brandBlackSprout)
+                        .foregroundStyle(YP2Color.textMuted)
 
                     Image("List")
                         .renderingMode(.template)
                         .resizable()
                         .scaledToFit()
                         .frame(width: 16, height: 16)
-                        .foregroundStyle(YPColor.brandBlackSprout)
+                        .foregroundStyle(YP2Color.textMuted)
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         }
+    }
+
+    private var trendCard: some View {
+        ZStack(alignment: .topLeading) {
+            Group {
+                if let firstFile = viewModel.posts.first?.files.first {
+                    CachedImage(path: firstFile)
+                } else {
+                    Rectangle().fill(YP2Color.ink)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 104)
+            .clipped()
+
+            Color.black.opacity(0.65)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Spacer()
+                
+                Text("HOT")
+                    .font(.custom("Pretendard-Bold", size: 11))
+                    .foregroundStyle(YP2Color.ink)
+                    .frame(width: 70, height: 26)
+                    .background(YP2Color.order)
+                    .padding(.leading, 16)
+
+                Text("방금 올라온 픽업 후기 \(viewModel.posts.count)개")
+                    .font(.custom("Pretendard-Bold", size: 19))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                    .padding(.horizontal, 16)
+                
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+        }
+        .frame(height: 104)
+        .clipShape(Rectangle())
+        .padding(.horizontal, 20)
+    }
+
+    private var miniPromoCard: some View {
+        HStack(spacing: 12) {
+            Image("Order_Empty")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 26, height: 26)
+                .foregroundStyle(YP2Color.textPrimary)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("이번 주 리뷰 챌린지")
+                    .font(.custom("Pretendard-Bold", size: 15))
+                    .foregroundStyle(YP2Color.textPrimary)
+
+                Text("후기 작성하고 2,000P 받기")
+                    .font(.custom("Pretendard-Bold", size: 12))
+                    .foregroundStyle(YP2Color.textMuted)
+            }
+
+            Spacer()
+        }
+        .padding(14)
+        .background(YP2Color.fog)
+        .padding(.horizontal, 20)
     }
 
     private func reloadPosts() async {
@@ -219,117 +293,79 @@ private struct PostCard: View {
     let onLikeTapped: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            authorRow
+        VStack(alignment: .leading, spacing: 12) {
+            ptop
 
-            if !post.files.isEmpty {
-                mediaGrid
-            }
-
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(post.title)
-                    .font(YPFont.body1Bold)
-                    .foregroundStyle(YPColor.textPrimary)
-                    .lineLimit(2)
-
-                Spacer(minLength: 8)
-
-                HStack(spacing: 4) {
-                    Image(systemName: "heart.fill")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(YPColor.actionAccent)
-
-                    Text("\(Int(post.like_count))개")
-                        .font(YPFont.body2Bold)
-                        .foregroundStyle(YPColor.textPrimary)
-                }
-                .lineLimit(1)
-            }
+            Text(post.title)
+                .font(YPFont.body1Bold)
+                .foregroundStyle(YP2Color.textPrimary)
+                .lineLimit(2)
 
             Text(post.content)
-                .font(YPFont.body3)
-                .foregroundStyle(YPColor.textTertiary)
+                .font(YPFont.body2Bold)
+                .foregroundStyle(YP2Color.textPrimary)
                 .lineLimit(3)
+                .lineSpacing(14 * 0.35)
 
-            storeBanner
+            if !post.files.isEmpty {
+                CommunityPostMediaGrid(paths: post.files)
+            }
         }
-        .padding(.bottom, 14)
-        .background(YPColor.backgroundPrimary)
+        .padding(14)
+        .background(YP2Color.backgroundPrimary)
+        .overlay {
+            Rectangle()
+                .stroke(YP2Color.borderDefault, lineWidth: 1)
+        }
     }
 
-    private var authorRow: some View {
-        HStack(spacing: 8) {
+    private var ptop: some View {
+        HStack(alignment: .top, spacing: 10) {
             CachedImage(path: post.creator.profileImage)
-                .frame(width: 28, height: 28)
+                .frame(width: 36, height: 36)
                 .clipShape(Circle())
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(post.creator.nick)
-                    .font(YPFont.body3Bold)
-                    .foregroundStyle(YPColor.textPrimary)
+                    .font(.custom("Pretendard-Bold", size: 14))
+                    .foregroundStyle(YP2Color.textPrimary)
                     .lineLimit(1)
 
-                Text(DateFormatManager.shared.relativeDate(from: post.createdAt))
-                    .font(YPFont.caption2)
-                    .foregroundStyle(YPColor.textTertiary)
+                Text(metaText)
+                    .font(.custom("Pretendard-Medium", size: 11))
+                    .foregroundStyle(YP2Color.textMuted)
+                    .lineLimit(1)
             }
 
             Spacer()
-        }
-    }
-
-    private var mediaGrid: some View {
-        ZStack(alignment: .topLeading) {
-            CommunityPostMediaGrid(paths: post.files)
 
             Button(action: onLikeTapped) {
-                Image(systemName: isLiked ? "heart.fill" : "heart")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(isLiked ? YPColor.actionAccent : YPColor.backgroundPrimary)
-                    .shadow(color: Color.black.opacity(0.25), radius: 3, x: 0, y: 1)
-                    .padding(12)
+                HStack(spacing: 4) {
+                    Image(isLiked ? "Like_Fill" : "Like_Empty")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 16, height: 16)
+                        .foregroundStyle(YP2Color.ink)
+
+                    Text("\(Int(post.like_count))")
+                        .font(.custom("Pretendard-Bold", size: 12))
+                        .foregroundStyle(YP2Color.ink)
+                }
+                .frame(width: 48, height: 26)
+                .background(isLiked ? YP2Color.order : YP2Color.fog)
+                .clipShape(Rectangle())
             }
             .buttonStyle(.plain)
         }
     }
 
-    @ViewBuilder
-    private var storeBanner: some View {
-        if let store = post.store, let storeName = store.name, !storeName.isEmpty {
-            HStack(spacing: 10) {
-                CachedImage(path: store.store_image_urls?.first)
-                    .frame(width: 58, height: 58)
-                    .clipped()
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(storeName)
-                        .font(YPFont.body3Bold)
-                        .foregroundStyle(YPColor.brandBlackSprout)
-                        .lineLimit(1)
-
-                    Text(storeSubtitle(for: store))
-                        .font(YPFont.caption1)
-                        .foregroundStyle(YPColor.brandDeepSprout)
-                        .lineLimit(1)
-                }
-
-                Spacer(minLength: 0)
-            }
-            .frame(height: 58)
-            .background(YPColor.backgroundBrandSubtle.opacity(0.75))
-            .overlay {
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(YPColor.brandBlackSprout.opacity(0.45), lineWidth: 1)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 6))
+    private var metaText: String {
+        let date = DateFormatManager.shared.relativeDate(from: post.createdAt)
+        if let store = post.store, let name = store.name, !name.isEmpty {
+            return "\(date) · \(name)"
         }
-    }
-
-    private func storeSubtitle(for store: PostStore) -> String {
-        [store.category, store.hashTags?.prefix(2).joined(separator: " ")]
-            .compactMap { $0 }
-            .filter { !$0.isEmpty }
-            .joined(separator: " · ")
+        return date
     }
 }
 
@@ -392,7 +428,7 @@ private struct CommunityPostMediaGrid: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 240)
+        .frame(height: 150)
         .clipShape(RoundedRectangle(cornerRadius: 6))
         .clipped()
     }
@@ -417,7 +453,7 @@ private struct CommunityPostMediaGrid: View {
                     Color.black.opacity(0.35)
                     Text("+\(extraCount)")
                         .font(YPFont.body1Bold)
-                        .foregroundStyle(YPColor.backgroundPrimary)
+                        .foregroundStyle(YP2Color.backgroundPrimary)
                 }
             }
     }
