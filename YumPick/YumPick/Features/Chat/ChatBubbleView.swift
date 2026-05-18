@@ -27,18 +27,18 @@ struct ChatBubbleView: View {
             VStack(alignment: isMine ? .trailing : .leading, spacing: 4) {
                 if !isMine {
                     Text(displaySender.nick)
-                        .ypFont(YPFont.caption1)
-                        .foregroundStyle(YPColor.textSecondary)
+                        .font(.custom("Pretendard-Bold", size: 11))
+                        .foregroundStyle(Color(hex: "#999999"))
                 }
 
                 if !message.content.isEmpty {
                     Text(message.content)
-                        .ypFont(YPFont.body2)
-                        .foregroundStyle(isMine ? YPColor.gray0 : YPColor.textPrimary)
+                        .font(.custom("Pretendard-Medium", size: 14))
+                        .foregroundStyle(YP2Color.textPrimary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                         .background(bubbleBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .clipShape(bubbleClipShape)
                         .opacity(status == .sending ? 0.6 : 1.0)
                 }
 
@@ -102,14 +102,14 @@ struct ChatBubbleView: View {
         switch files.count {
         case 1:
             cell(files[0], idx: 0, w: gridWidth, h: 200)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .clipShape(bubbleClipShape)
 
         case 2:
             HStack(spacing: gap) {
                 cell(files[0], idx: 0, w: half, h: 160)
                 cell(files[1], idx: 1, w: half, h: 160)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .clipShape(bubbleClipShape)
 
         case 3:
             HStack(alignment: .top, spacing: gap) {
@@ -119,7 +119,7 @@ struct ChatBubbleView: View {
                     cell(files[2], idx: 2, w: half - 36, h: 98)
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .clipShape(bubbleClipShape)
 
         case 4:
             VStack(spacing: gap) {
@@ -132,7 +132,7 @@ struct ChatBubbleView: View {
                     cell(files[3], idx: 3, w: half, h: half)
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .clipShape(bubbleClipShape)
 
         case 5:
             VStack(spacing: gap) {
@@ -146,7 +146,7 @@ struct ChatBubbleView: View {
                     cell(files[4], idx: 4, w: third, h: third)
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .clipShape(bubbleClipShape)
 
         default:
             EmptyView()
@@ -181,15 +181,36 @@ struct ChatBubbleView: View {
     }
 
     private var bubbleBackground: Color {
-        isMine ? YPColor.actionPrimary : YPColor.backgroundSecondary
+        isMine ? YP2Color.actionPrimary : YP2Color.paper
+    }
+
+    private var bubbleClipShape: UnevenRoundedRectangle {
+        UnevenRoundedRectangle(cornerRadii: bubbleCornerRadii, style: .continuous)
+    }
+
+    private var bubbleCornerRadii: RectangleCornerRadii {
+        let radius: CGFloat = 6
+        return isMine
+            ? RectangleCornerRadii(
+                topLeading: radius,
+                bottomLeading: radius,
+                bottomTrailing: radius,
+                topTrailing: 0
+            )
+            : RectangleCornerRadii(
+                topLeading: 0,
+                bottomLeading: radius,
+                bottomTrailing: radius,
+                topTrailing: radius
+            )
     }
 
     private var timeLabel: some View {
         Group {
             if let date = DateFormatManager.shared.date(fromChatISOString: message.createdAt) {
                 Text(DateFormatManager.shared.chatTime(from: date))
-                    .ypFont(YPFont.caption2)
-                    .foregroundStyle(YPColor.textTertiary)
+                    .font(.custom("Pretendard-Medium", size: 11))
+                    .foregroundStyle(Color(hex: "#999999"))
             }
         }
     }

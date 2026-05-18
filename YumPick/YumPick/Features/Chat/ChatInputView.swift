@@ -46,7 +46,7 @@ struct ChatInputView: View {
             if pdfConflictToast {
                 Text("PDF는 단독으로만 전송할 수 있어요")
                     .ypFont(YPFont.caption1)
-                    .foregroundStyle(YPColor.gray0)
+                    .foregroundStyle(YP2Color.paper)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -59,28 +59,37 @@ struct ChatInputView: View {
                     Image(systemName: "plus")
                         .frame(width: 36, height: 36)
                 }
-                .foregroundStyle(YPColor.textSecondary)
+                .foregroundStyle(YP2Color.textSecondary)
 
-                TextField("메시지 입력", text: $text, axis: .vertical)
-                    .ypFont(YPFont.body2)
+                TextField(
+                    "메시지 입력",
+                    text: $text,
+                    prompt: Text("메시지 입력")
+                        .font(.custom("Pretendard-Medium", size: 14))
+                        .foregroundStyle(Color(hex: "#AAAAAA")),
+                    axis: .vertical
+                )
+                    .font(.custom("Pretendard-Medium", size: 14))
+                    .foregroundStyle(YP2Color.textPrimary)
+                    .tint(YP2Color.textPrimary)
                     .lineLimit(1...3)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 9)
-                    .background(YPColor.backgroundSecondary)
+                    .background(YP2Color.backgroundSecondary)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
 
                 Button(action: onSend) {
                     Image(systemName: isSending ? "hourglass" : "arrow.up.circle.fill")
                         .font(.system(size: 32))
                 }
-                .foregroundStyle(canSend ? YPColor.actionPrimary : YPColor.textTertiary)
+                .foregroundStyle(canSend ? YP2Color.actionPrimary : Color(hex: "#AAAAAA"))
                 .disabled(!canSend)
             }
             .padding(.horizontal, 12)
             .padding(.bottom, 12)
         }
         .padding(.top, 8)
-        .background(YPColor.backgroundPrimary)
+        .background(YP2Color.paper)
         // 첨부 종류 선택 시트
         .sheet(isPresented: $showsAttachmentSheet) {
             ChatAttachmentSheet { action in

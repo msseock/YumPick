@@ -72,7 +72,7 @@ struct ChatView: View {
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
                     }
-                    .background(YPColor.backgroundPrimary)
+                    .background(YP2Color.backgroundSecondary)
                     .scrollDismissesKeyboard(.interactively)
                     .onAppear {
                         scheduleInitialBottomScroll(proxy: proxy)
@@ -191,12 +191,12 @@ struct ChatView: View {
                         ProgressView().scaleEffect(0.8)
                         Text("파일 업로드 중...")
                             .ypFont(YPFont.caption1)
-                            .foregroundStyle(YPColor.textSecondary)
+                            .foregroundStyle(YP2Color.textSecondary)
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 6)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(YPColor.backgroundSecondary)
+                    .background(YP2Color.backgroundSecondary)
                 }
 
                 ChatInputView(
@@ -206,7 +206,7 @@ struct ChatView: View {
                     onSend: send
                 )
             }
-            .background(YPColor.backgroundPrimary)
+            .background(YP2Color.backgroundSecondary)
 
             if isLightboxActive {
                 MediaLightboxView(
@@ -436,12 +436,12 @@ struct ChatDateDivider: View {
     var body: some View {
         if let date = DateFormatManager.shared.date(fromChatISOString: isoString) {
             HStack {
-                Rectangle().frame(height: 1).foregroundStyle(YPColor.gray15)
+                Rectangle().frame(height: 1).foregroundStyle(YP2Color.borderDefault)
                 Text(DateFormatManager.shared.chatDateLabel(from: date))
-                    .ypFont(YPFont.caption2)
-                    .foregroundStyle(YPColor.textTertiary)
+                    .font(.custom("Pretendard-Bold", size: 11))
+                    .foregroundStyle(YP2Color.textSecondary)
                     .fixedSize()
-                Rectangle().frame(height: 1).foregroundStyle(YPColor.gray15)
+                Rectangle().frame(height: 1).foregroundStyle(YP2Color.borderDefault)
             }
             .padding(.vertical, 8)
         }
@@ -457,25 +457,25 @@ struct ChatNewMessagePreviewPill: View {
             HStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(message.sender.nick)
-                        .ypFont(YPFont.caption2)
-                        .foregroundStyle(YPColor.textSecondary)
+                        .font(.custom("Pretendard-Bold", size: 11))
+                        .foregroundStyle(Color(hex: "#999999"))
                         .lineLimit(1)
                     Text(previewText)
-                        .ypFont(YPFont.caption1)
-                        .foregroundStyle(YPColor.textPrimary)
+                        .font(.custom("Pretendard-Medium", size: 14))
+                        .foregroundStyle(YP2Color.textPrimary)
                         .lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
                 Image(systemName: "chevron.down")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(YPColor.textSecondary)
+                    .foregroundStyle(YP2Color.textSecondary)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
             .frame(maxWidth: 280)
-            .background(YPColor.backgroundPrimary, in: Capsule())
-            .overlay(Capsule().stroke(YPColor.borderSubtle, lineWidth: 1))
+            .background(YP2Color.paper, in: Capsule())
+            .overlay(Capsule().stroke(YP2Color.borderDefault, lineWidth: 1))
             .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
         }
         .buttonStyle(.plain)
@@ -496,10 +496,10 @@ struct ScrollToBottomButton: View {
         Button(action: action) {
             Image(systemName: "chevron.down")
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(YPColor.textSecondary)
+                .foregroundStyle(YP2Color.textSecondary)
                 .frame(width: 40, height: 40)
-                .background(YPColor.backgroundPrimary, in: Circle())
-                .overlay(Circle().stroke(YPColor.borderSubtle, lineWidth: 1))
+                .background(YP2Color.paper, in: Circle())
+                .overlay(Circle().stroke(YP2Color.borderDefault, lineWidth: 1))
                 .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
         }
     }
@@ -513,13 +513,13 @@ struct ChatErrorBanner: View {
         HStack {
             Text(message)
                 .ypFont(YPFont.caption1)
-                .foregroundStyle(YPColor.gray0)
+                .foregroundStyle(YP2Color.paper)
                 .lineLimit(2)
             Spacer()
             Button(action: onDismiss) {
                 Image(systemName: "xmark")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(YPColor.gray0)
+                    .foregroundStyle(YP2Color.paper)
             }
         }
         .padding(.horizontal, 16)
