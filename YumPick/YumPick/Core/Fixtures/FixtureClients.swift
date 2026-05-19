@@ -189,7 +189,20 @@ final class FixtureChatClient: ChatClientProtocol {
     }
 
     func sendMessage(roomID: String, content: String, files: [String]) async throws -> ChatMessage {
-        throw FixtureError.unsupportedWriteOperation
+        try await Task.sleep(nanoseconds: 5_000_000_000)
+
+        let nowISO = DateFormatManager.shared.chatISOString(from: Date())
+        let sender = UserSession.shared.asSender
+            ?? ChatSender(userID: "fixture-user", nick: "Fixture User", profileImage: nil)
+        return ChatMessage(
+            chatID: UUID().uuidString,
+            roomID: roomID,
+            content: content,
+            createdAt: nowISO,
+            updatedAt: nowISO,
+            sender: sender,
+            files: files
+        )
     }
 
     func uploadFiles(roomID: String, parts: [MultipartData]) async throws -> [String] {

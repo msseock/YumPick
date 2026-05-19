@@ -50,7 +50,9 @@ final class ChatViewModel {
         guard !isAppeared else { return }
         isAppeared = true
         bindSocket()
-        loadInitialLocalMessages()
+        if !FixtureFileResolver.usesFixtures {
+            loadInitialLocalMessages()
+        }
         socketManager.connect(roomID: currentRoomID)
         Task { await syncRecentMessages() }
         outbox.start()
@@ -268,6 +270,11 @@ final class ChatViewModel {
         defer { isLoading = false }
 
         do {
+            if FixtureFileResolver.usesFixtures {
+                try await syncFixtureMessages()
+                return
+            }
+
             let lastDate = try repository.lastCreatedAt(roomID: currentRoomID)
 
             if let lastDate {
@@ -294,6 +301,26 @@ final class ChatViewModel {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func syncFixtureMessages() async throws {
+        let fixtureMessages = try await client.fetchMessages(roomID: currentRoomID, next: nil)
+        let pending = try repository.fetchPendingOrFailed(limit: 100)
+        pendingClientIDs = Set(pending.filter { $0.status == .sending }.map(\.clientID))
+        failedClientIDs = Set(pending.filter { $0.status == .failed }.map(\.clientID))
+
+        ChatUserDirectory.shared.upsert(fixtureMessages.map(\.sender))
+        try repository.saveAllInitial(fixtureMessages)
+
+        let localPendingMessages = try repository.fetchLatestMessages(
+            roomID: currentRoomID,
+            limit: PagePolicy.initialLocalLimit
+        )
+        .filter { pendingClientIDs.contains($0.chatID) || failedClientIDs.contains($0.chatID) }
+
+        messages = mergeMessages(fixtureMessages + localPendingMessages)
+        hasMoreOlder = false
+        try repository.markAllRead(roomID: currentRoomID)
     }
 
     private func appendMessages(_ newMessages: [ChatMessage]) {
