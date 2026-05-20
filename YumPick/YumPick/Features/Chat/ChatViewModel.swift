@@ -133,7 +133,7 @@ final class ChatViewModel {
         )
 
         do {
-            try repository.savePending(pending, clientID: clientID)
+            try repository.savePending(pending)
         } catch {
             errorMessage = error.localizedDescription
             return
@@ -147,22 +147,22 @@ final class ChatViewModel {
         do {
             let sent = try await client.sendMessage(roomID: currentRoomID, content: trimmed, files: files)
             ChatUserDirectory.shared.upsert(sent.sender)
-            try repository.replacePending(clientID: clientID, with: sent)
+            try repository.replacePending(chatID: clientID, with: sent)
             pendingClientIDs.remove(clientID)
             failedClientIDs.remove(clientID)
             messages = replacePendingInDisplay(clientID: clientID, with: sent)
         } catch {
-            try? repository.markFailed(clientID: clientID)
+            try? repository.markFailed(chatID: clientID)
             pendingClientIDs.remove(clientID)
             failedClientIDs.insert(clientID)
             errorMessage = error.localizedDescription
         }
     }
 
-    func retrySend(clientID: String) async {
-        guard failedClientIDs.contains(clientID),
-              let target = messages.first(where: { $0.chatID == clientID }) else { return }
-        failedClientIDs.remove(clientID)
+    func retrySend(chatID: String) async {
+        guard failedClientIDs.contains(chatID),
+              let target = messages.first(where: { $0.chatID == chatID }) else { return }
+        failedClientIDs.remove(chatID)
         await sendMessage(content: target.content, files: target.files)
     }
 
@@ -177,13 +177,13 @@ final class ChatViewModel {
         }
     }
 
-    func cancelFailedSend(clientID: String) {
-        guard failedClientIDs.contains(clientID) else { return }
+    func cancelFailedSend(chatID: String) {
+        guard failedClientIDs.contains(chatID) else { return }
         do {
-            try repository.deletePendingOrFailed(clientID: clientID)
-            pendingClientIDs.remove(clientID)
-            failedClientIDs.remove(clientID)
-            messages.removeAll { $0.chatID == clientID }
+            try repository.deletePendingOrFailed(chatID: chatID)
+            pendingClientIDs.remove(chatID)
+            failedClientIDs.remove(chatID)
+            messages.removeAll { $0.chatID == chatID }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -214,7 +214,7 @@ final class ChatViewModel {
                 ChatUserDirectory.shared.upsert(message.sender)
                 do {
                     if let pendingClientID = self.matchingPendingClientID(for: message) {
-                        try self.repository.replacePending(clientID: pendingClientID, with: message)
+                        try self.repository.replacePending(chatID: pendingClientID, with: message)
                         self.pendingClientIDs.remove(pendingClientID)
                         self.failedClientIDs.remove(pendingClientID)
                         self.messages = self.replacePendingInDisplay(clientID: pendingClientID, with: message)
@@ -238,9 +238,9 @@ final class ChatViewModel {
         outbox.sentMessagePublisher
             .sink { [weak self] sent in
                 guard let self, sent.message.roomID == self.currentRoomID else { return }
-                self.pendingClientIDs.remove(sent.clientID)
-                self.failedClientIDs.remove(sent.clientID)
-                self.messages = self.replacePendingInDisplay(clientID: sent.clientID, with: sent.message)
+                self.pendingClientIDs.remove(sent.chatID)
+                self.failedClientIDs.remove(sent.chatID)
+                self.messages = self.replacePendingInDisplay(clientID: sent.chatID, with: sent.message)
             }
             .store(in: &cancellables)
     }
@@ -248,8 +248,8 @@ final class ChatViewModel {
     private func loadInitialLocalMessages() {
         do {
             let pending = try repository.fetchPendingOrFailed(limit: 100)
-            pendingClientIDs = Set(pending.filter { $0.status == .sending }.map(\.clientID))
-            failedClientIDs = Set(pending.filter { $0.status == .failed }.map(\.clientID))
+            pendingClientIDs = Set(pending.filter { $0.status == .sending }.map(\.chatID))
+            failedClientIDs = Set(pending.filter { $0.status == .failed }.map(\.chatID))
 
             guard messages.isEmpty else { return }
 
@@ -306,8 +306,8 @@ final class ChatViewModel {
     private func syncFixtureMessages() async throws {
         let fixtureMessages = try await client.fetchMessages(roomID: currentRoomID, next: nil)
         let pending = try repository.fetchPendingOrFailed(limit: 100)
-        pendingClientIDs = Set(pending.filter { $0.status == .sending }.map(\.clientID))
-        failedClientIDs = Set(pending.filter { $0.status == .failed }.map(\.clientID))
+        pendingClientIDs = Set(pending.filter { $0.status == .sending }.map(\.chatID))
+        failedClientIDs = Set(pending.filter { $0.status == .failed }.map(\.chatID))
 
         ChatUserDirectory.shared.upsert(fixtureMessages.map(\.sender))
         try repository.saveAllInitial(fixtureMessages)

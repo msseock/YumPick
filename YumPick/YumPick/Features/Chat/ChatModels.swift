@@ -153,10 +153,9 @@ struct ChatRoom: Identifiable, Equatable, Codable {
 // MARK: - Realm Conversion
 
 extension ChatMessage {
-    func toRealmObject(clientID: String? = nil, status: ChatMessageStatus = .sent) -> ChatMessageObject {
+    func toRealmObject(status: ChatMessageStatus = .sent) -> ChatMessageObject {
         let object = ChatMessageObject()
         object.chatID = chatID
-        object.clientID = clientID ?? chatID
         object.roomID = roomID
         object.content = content
         object.createdAt = DateFormatManager.shared.date(fromChatISOString: createdAt) ?? Date()

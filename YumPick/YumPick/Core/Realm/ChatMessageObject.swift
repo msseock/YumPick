@@ -3,7 +3,6 @@ import RealmSwift
 
 final class ChatMessageObject: Object {
     @Persisted(primaryKey: true) var chatID: String = ""
-    @Persisted var clientID: String = ""
     @Persisted var roomID: String = ""
     @Persisted var content: String = ""
     @Persisted var createdAt: Date = Date()

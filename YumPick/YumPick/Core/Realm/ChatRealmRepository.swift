@@ -2,11 +2,11 @@ import Foundation
 import RealmSwift
 
 protocol ChatRealmRepositoryProtocol {
-    func savePending(_ message: ChatMessage, clientID: String) throws
-    func markFailed(clientID: String) throws
-    func replacePending(clientID: String, with message: ChatMessage) throws
+    func savePending(_ message: ChatMessage) throws
+    func markFailed(chatID: String) throws
+    func replacePending(chatID: String, with message: ChatMessage) throws
     func deleteMessage(chatID: String) throws
-    func deletePendingOrFailed(clientID: String) throws
+    func deletePendingOrFailed(chatID: String) throws
     func saveAll(_ messages: [ChatMessage], isRoomOpen: Bool) throws
     func saveAllInitial(_ messages: [ChatMessage]) throws
 
@@ -23,7 +23,7 @@ protocol ChatRealmRepositoryProtocol {
 }
 
 struct ChatPendingMessage {
-    let clientID: String
+    let chatID: String
     let roomID: String
     let content: String
     let files: [String]
@@ -37,10 +37,10 @@ final class ChatRealmRepository: ChatRealmRepositoryProtocol {
         self.configuration = configuration
     }
 
-    func savePending(_ message: ChatMessage, clientID: String) throws {
+    func savePending(_ message: ChatMessage) throws {
         let realm = try Realm(configuration: configuration)
         let wasHidden = realm.object(ofType: ChatMessageObject.self, forPrimaryKey: message.chatID)?.isHidden ?? false
-        let obj = message.toRealmObject(clientID: clientID, status: .sending)
+        let obj = message.toRealmObject(status: .sending)
         obj.isRead = true
         obj.isHidden = wasHidden
         try realm.write {
@@ -48,30 +48,28 @@ final class ChatRealmRepository: ChatRealmRepositoryProtocol {
         }
     }
 
-    func markFailed(clientID: String) throws {
+    func markFailed(chatID: String) throws {
         let realm = try Realm(configuration: configuration)
-        guard let object = realm.objects(ChatMessageObject.self)
-            .first(where: { $0.clientID == clientID }) else { return }
+        guard let object = realm.object(ofType: ChatMessageObject.self, forPrimaryKey: chatID) else { return }
         try realm.write {
             object.status = ChatMessageStatus.failed.rawValue
         }
     }
 
-    func replacePending(clientID: String, with message: ChatMessage) throws {
+    func replacePending(chatID: String, with message: ChatMessage) throws {
         let realm = try Realm(configuration: configuration)
         try realm.write {
             var wasHidden = false
-            if let pending = realm.objects(ChatMessageObject.self)
-                .first(where: { $0.clientID == clientID }) {
+            if let pending = realm.object(ofType: ChatMessageObject.self, forPrimaryKey: chatID) {
                 wasHidden = pending.isHidden
-                if pending.chatID != message.chatID {
+                if chatID != message.chatID {
                     realm.delete(pending)
                 }
             }
             if let existing = realm.object(ofType: ChatMessageObject.self, forPrimaryKey: message.chatID) {
                 wasHidden = wasHidden || existing.isHidden
             }
-            let obj = message.toRealmObject(clientID: clientID, status: .sent)
+            let obj = message.toRealmObject(status: .sent)
             obj.isRead = true
             obj.isHidden = wasHidden
             realm.add(obj, update: .modified)
@@ -87,13 +85,12 @@ final class ChatRealmRepository: ChatRealmRepositoryProtocol {
         }
     }
 
-    func deletePendingOrFailed(clientID: String) throws {
+    func deletePendingOrFailed(chatID: String) throws {
         let realm = try Realm(configuration: configuration)
         let sendingRaw = ChatMessageStatus.sending.rawValue
         let failedRaw = ChatMessageStatus.failed.rawValue
-        guard let object = realm.objects(ChatMessageObject.self)
-            .first(where: { $0.clientID == clientID && ($0.status == sendingRaw || $0.status == failedRaw) })
-        else { return }
+        guard let object = realm.object(ofType: ChatMessageObject.self, forPrimaryKey: chatID),
+              object.status == sendingRaw || object.status == failedRaw else { return }
         try realm.write {
             realm.delete(object)
         }
@@ -185,7 +182,7 @@ final class ChatRealmRepository: ChatRealmRepositoryProtocol {
             .prefix(limit)
         return results.map {
             ChatPendingMessage(
-                clientID: $0.clientID,
+                chatID: $0.chatID,
                 roomID: $0.roomID,
                 content: $0.content,
                 files: Array($0.files),

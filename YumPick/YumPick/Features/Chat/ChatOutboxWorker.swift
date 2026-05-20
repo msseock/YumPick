@@ -5,7 +5,7 @@ import Network
 @MainActor
 final class ChatOutboxWorker {
     struct SentMessage {
-        let clientID: String
+        let chatID: String
         let message: ChatMessage
     }
 
@@ -60,10 +60,10 @@ final class ChatOutboxWorker {
                     await MainActor.run {
                         ChatUserDirectory.shared.upsert(sent.sender)
                     }
-                    try repository.replacePending(clientID: item.clientID, with: sent)
-                    sentMessageSubject.send(SentMessage(clientID: item.clientID, message: sent))
+                    try repository.replacePending(chatID: item.chatID, with: sent)
+                    sentMessageSubject.send(SentMessage(chatID: item.chatID, message: sent))
                 } catch {
-                    try? repository.markFailed(clientID: item.clientID)
+                    try? repository.markFailed(chatID: item.chatID)
                     break
                 }
             }

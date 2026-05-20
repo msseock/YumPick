@@ -43,7 +43,7 @@ struct ChatView: View {
                                     isMine: viewModel.isMine(message),
                                     status: viewModel.status(of: message),
                                     namespace: mediaNamespace,
-                                    onRetry: { Task { await viewModel.retrySend(clientID: message.chatID) } },
+                                    onRetry: { Task { await viewModel.retrySend(chatID: message.chatID) } },
                                     onDelete: {
                                         dismissKeyboard()
                                         deletionConfirmation = .deleteLocal(message)
@@ -233,7 +233,7 @@ struct ChatView: View {
                 case .deleteLocal:
                     viewModel.deleteLocalMessage(confirmation.message)
                 case .cancelFailedSend:
-                    viewModel.cancelFailedSend(clientID: confirmation.message.chatID)
+                    viewModel.cancelFailedSend(chatID: confirmation.message.chatID)
                 }
                 deletionConfirmation = nil
             }
