@@ -11,6 +11,12 @@ enum RealmConfig {
         config.migrationBlock = { _, oldVersion in
             _ = oldVersion
         }
+        #if DEBUG
+        config.deleteRealmIfMigrationNeeded = true
+        if let fileURL = config.fileURL, (try? Realm(configuration: config)) == nil {
+            try? FileManager.default.removeItem(at: fileURL)
+        }
+        #endif
         return config
     }
 
