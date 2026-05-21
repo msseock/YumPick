@@ -33,6 +33,10 @@ struct YP2PickupStoreCard: View {
     private var imageSection: some View {
         GeometryReader { proxy in
             imageGrid(size: proxy.size)
+                .overlay(alignment: .topTrailing) {
+                    likeButton
+                        .padding(10)
+                }
         }
         .frame(height: totalImageHeight)
         .clipped()
@@ -83,24 +87,22 @@ struct YP2PickupStoreCard: View {
                 YP2PickchelinBadge()
                     .padding(10)
             }
-
-            HStack {
-                Spacer()
-                Button(action: onLikeTapped) {
-                    Image(isLiked ? "Like_Fill" : "Like_Empty")
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 26, height: 26)
-                        .foregroundStyle(isLiked ? YP2Color.order : YP2Color.paper)
-                        .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 1)
-                }
-                .buttonStyle(.plain)
-                .padding(10)
-            }
         }
         .frame(width: width, height: height)
         .clipped()
+    }
+
+    private var likeButton: some View {
+        Button(action: onLikeTapped) {
+            Image(isLiked ? "Like_Fill" : "Like_Empty")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 26, height: 26)
+                .foregroundStyle(isLiked ? YP2Color.order : YP2Color.paper)
+                .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 1)
+        }
+        .buttonStyle(.plain)
     }
 
     private func sideImage(path: String?, width: CGFloat, height: CGFloat) -> some View {
