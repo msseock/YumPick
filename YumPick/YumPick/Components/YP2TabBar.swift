@@ -5,7 +5,8 @@ import SwiftUI
 struct YP2TabBar: View {
     @Binding var selectedTab: YPTab
 
-    private let barHeight: CGFloat = 70
+    private let barHeight: CGFloat = 90
+    private let bottomContentPadding: CGFloat = 20
 
     var body: some View {
         HStack(spacing: 0) {
@@ -21,6 +22,7 @@ struct YP2TabBar: View {
                     empty: "Profile_Empty", fill: "Profile_Fill", label: "마이페이지")
         }
         .padding(.horizontal, 16)
+        .padding(.bottom, bottomContentPadding)
         .frame(maxWidth: .infinity)
         .frame(height: barHeight)
         .background(
