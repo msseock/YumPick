@@ -103,10 +103,6 @@ struct VideoListView: View {
                     .foregroundStyle(YP2Color.ink)
 
                 Spacer()
-
-                Text("전체")
-                    .font(.custom("Pretendard-Bold", size: 12))
-                    .foregroundStyle(YP2Color.textMuted)
             }
             .padding(.horizontal, 20)
             .padding(.top, 24)

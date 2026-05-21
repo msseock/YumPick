@@ -234,10 +234,6 @@ struct HomeView: View {
                     .foregroundStyle(YP2Color.ink)
 
                 Spacer()
-
-                Text("전체")
-                    .font(YPFont.caption1)
-                    .foregroundStyle(YP2Color.textTertiary)
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
@@ -321,7 +317,7 @@ struct HomeView: View {
                 .id(HomeScrollTarget.pickupStoresTop)
 
             HStack {
-                Text("내가 픽업 가게")
+                Text("근처 픽업 가게")
                     .font(.custom("Pretendard-Bold", size: 22))
                     .foregroundStyle(YP2Color.ink)
 
