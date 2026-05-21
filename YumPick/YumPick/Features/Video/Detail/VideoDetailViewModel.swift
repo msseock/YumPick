@@ -30,6 +30,7 @@ final class VideoDetailViewModel {
     private var lastKnownPath: NWPath.Status = .satisfied
     private var hasRecoveredFromExpiry = false
     private var subtitleLoadTask: Task<Void, Never>? = nil
+    private var currentNetworkIsExpensive: Bool = false
 
     init(
         video: Video,
@@ -104,6 +105,7 @@ final class VideoDetailViewModel {
             print("🎬 [VideoDetail] AVPlayer에 전달할 URL: \(url.absoluteString)")
             #endif
             player.load(url: url, autoPlay: true)
+            player.applyBufferStrategy(isExpensive: currentNetworkIsExpensive)
             loadState = .ready
             loadDefaultSubtitleIfNeeded(from: info)
         } catch {
@@ -245,6 +247,8 @@ final class VideoDetailViewModel {
                 guard let self else { return }
                 let previous = self.lastKnownPath
                 self.lastKnownPath = path.status
+                self.currentNetworkIsExpensive = path.isExpensive
+                self.player.applyBufferStrategy(isExpensive: path.isExpensive)
                 if previous != .satisfied && path.status == .satisfied {
                     // 네트워크 재연결 → 재생 실패 상태였으면 자동 복구
                     if case .failed = self.player.state {
