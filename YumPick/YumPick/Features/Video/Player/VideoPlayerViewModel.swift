@@ -139,13 +139,13 @@ final class VideoPlayerViewModel {
     }
 
     /// 네트워크 환경에 따라 선읽기 버퍼 크기를 조정한다.
-    /// 셀룰러(isExpensive)일 때는 10초로 줄여 데이터를 아끼고,
-    /// WiFi일 때는 30초로 늘려 버퍼링 발생 빈도를 낮춘다.
+    /// WiFi(isExpensive=false)일 때는 0으로 두어 AVFoundation의 적응형 알고리즘에 맡기고,
+    /// 셀룰러(isExpensive=true)일 때는 5초로 고정해 데이터를 아낀다.
     func applyBufferStrategy(isExpensive: Bool) {
         guard let item = player.currentItem else { return }
-        item.preferredForwardBufferDuration = isExpensive ? 10 : 30
+        item.preferredForwardBufferDuration = isExpensive ? 5 : 0
         #if DEBUG
-        print("📶 [Player] bufferDuration=\(isExpensive ? 10 : 30)s (isExpensive=\(isExpensive))")
+        print("📶 [Player] bufferDuration=\(isExpensive ? "5s" : "0 (system)") (isExpensive=\(isExpensive))")
         #endif
     }
 
