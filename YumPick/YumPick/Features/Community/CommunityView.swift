@@ -302,7 +302,7 @@ private struct PostCard: View {
                 .lineLimit(2)
 
             Text(post.content)
-                .font(YPFont.body2Bold)
+                .font(YPFont.body2)
                 .foregroundStyle(YP2Color.textPrimary)
                 .lineLimit(3)
                 .lineSpacing(14 * 0.35)
