@@ -4,6 +4,7 @@ struct PaymentCompleteView: View {
     @State private var viewModel: PaymentCompleteViewModel
     // TODO: coordinator 패턴 도입 시 AppRouter로 전환
     let onGoToOrders: () -> Void
+    private let skipValidation: Bool
 
     init(
         orderCode: String,
@@ -17,6 +18,18 @@ struct PaymentCompleteView: View {
         ))
         self.onGoToOrders = onGoToOrders
         self._impUid = State(initialValue: impUid)
+        self.skipValidation = false
+    }
+
+    /// 미리보기 등 검증 단계를 건너뛰고 특정 phase를 바로 보여줄 때 사용한다.
+    init(
+        viewModel: PaymentCompleteViewModel,
+        onGoToOrders: @escaping () -> Void
+    ) {
+        _viewModel = State(initialValue: viewModel)
+        self.onGoToOrders = onGoToOrders
+        self._impUid = State(initialValue: "")
+        self.skipValidation = true
     }
 
     @State private var impUid: String
@@ -34,7 +47,10 @@ struct PaymentCompleteView: View {
         }
         .navigationTitle("")
         .navigationBarBackButtonHidden(true)
-        .task { await viewModel.validate(impUid: impUid) }
+        .task {
+            guard !skipValidation else { return }
+            await viewModel.validate(impUid: impUid)
+        }
     }
 
     // MARK: - Validating
@@ -58,7 +74,7 @@ struct PaymentCompleteView: View {
 
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 64))
-                .foregroundStyle(YPColor.brandDeepSprout)
+                .foregroundStyle(YP2Color.actionPrimary)
                 .padding(.bottom, 20)
 
             Text("결제가 완료되었어요")
@@ -72,7 +88,7 @@ struct PaymentCompleteView: View {
             }
             .padding(16)
             .background(YPColor.backgroundSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: 4))
             .padding(.horizontal, 24)
             .padding(.top, 32)
 
@@ -83,11 +99,11 @@ struct PaymentCompleteView: View {
             } label: {
                 Text("주문 내역으로")
                     .font(YPFont.body1Bold)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)
                     .frame(height: 52)
-                    .background(YPColor.brandBlackSprout)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .background(YP2Color.actionPrimary)
+//                    .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 32)
@@ -129,7 +145,7 @@ struct PaymentCompleteView: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 52)
                     .background(YPColor.backgroundSecondary)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 32)
@@ -151,13 +167,39 @@ struct PaymentCompleteView: View {
     }
 }
 
-#Preview {
-    NavigationStack {
-        PaymentCompleteView(
-            orderCode: "ORDER-20240501-001",
-            totalPrice: 10000,
-            impUid: "imp_mock_uid",
-            onGoToOrders: {}
-        )
+#Preview("결제 성공") {
+    let viewModel = PaymentCompleteViewModel(
+        orderCode: "ORDER-20240501-001",
+        totalPrice: 10000
+    )
+    viewModel.phase = .success
+
+    return NavigationStack {
+        PaymentCompleteView(viewModel: viewModel, onGoToOrders: {})
+    }
+}
+
+#Preview("결제 실패") {
+    let viewModel = PaymentCompleteViewModel(
+        orderCode: "ORDER-20240501-001",
+        totalPrice: 10000
+    )
+    viewModel.phase = .failure
+    viewModel.errorMessage = "결제 정보를 확인할 수 없습니다. 잠시 후 다시 시도해주세요."
+
+    return NavigationStack {
+        PaymentCompleteView(viewModel: viewModel, onGoToOrders: {})
+    }
+}
+
+#Preview("결제 확인 중") {
+    let viewModel = PaymentCompleteViewModel(
+        orderCode: "ORDER-20240501-001",
+        totalPrice: 10000
+    )
+    viewModel.phase = .validating
+
+    return NavigationStack {
+        PaymentCompleteView(viewModel: viewModel, onGoToOrders: {})
     }
 }
