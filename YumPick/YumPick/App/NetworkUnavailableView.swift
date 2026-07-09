@@ -10,9 +10,9 @@ struct NetworkUnavailableView: View {
 
             Image(systemName: "wifi.exclamationmark")
                 .font(.system(size: 44, weight: .semibold))
-                .foregroundStyle(YPColor.actionPrimary)
+                .foregroundStyle(YP2Color.actionInk)
                 .frame(width: 72, height: 72)
-                .background(YPColor.backgroundBrandSubtle)
+                .background(YP2Color.backgroundPrimary)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
 
             VStack(spacing: 8) {
@@ -36,11 +36,11 @@ struct NetworkUnavailableView: View {
                             .font(YPFont.body1)
                     }
                 }
-                .foregroundStyle(YPColor.gray0)
+                .foregroundStyle(YP2Color.actionInk)
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
-                .background(YPColor.actionPrimary)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .background(YP2Color.actionPrimary)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
             }
             .disabled(isRetrying)
             .padding(.top, 8)
