@@ -156,7 +156,7 @@ struct MediaGridView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
+                HStack(spacing: 8) {
                     // 추가 버튼
                     if pickerVM.totalMediaCount < maxCount {
                         PhotosPicker(
@@ -188,25 +188,28 @@ struct MediaGridView: View {
                 HStack(spacing: 6) {
                     ProgressView().scaleEffect(0.8)
                     Text("미디어 처리 중...")
-                        .font(YPFont.caption1)
-                        .foregroundStyle(YPColor.textTertiary)
+                        .font(.custom("Pretendard-Medium", size: 12))
+                        .foregroundStyle(YP2Color.textMuted)
                 }
             }
         }
     }
 
     private var addButton: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 6) {
             Image(systemName: "plus")
-                .font(.system(size: 20))
-                .foregroundStyle(YPColor.textTertiary)
+                .font(.system(size: 19, weight: .bold))
+                .foregroundStyle(YP2Color.ink)
             Text("\(pickerVM.totalMediaCount)/\(maxCount)")
-                .font(YPFont.caption2)
-                .foregroundStyle(YPColor.textTertiary)
+                .font(.custom("Pretendard-Bold", size: 11))
+                .foregroundStyle(YP2Color.textMuted)
         }
-        .frame(width: 80, height: 80)
-        .background(YPColor.backgroundSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .frame(width: 84, height: 84)
+        .background(YP2Color.fog)
+        .overlay {
+            Rectangle()
+                .stroke(YP2Color.borderDefault, lineWidth: 1)
+        }
     }
 
     private func existingMediaThumbnail(path: String, index: Int) -> some View {
@@ -218,15 +221,15 @@ struct MediaGridView: View {
                     CachedImage(path: path)
                 }
             }
-            .frame(width: 80, height: 80)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .frame(width: 84, height: 84)
+            .clipped()
 
             if isVideoPath(path) {
                 Image(systemName: "play.fill")
                     .font(.system(size: 12))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(YP2Color.paper)
                     .padding(4)
-                    .background(Color.black.opacity(0.5))
+                    .background(YP2Color.overlay)
                     .clipShape(Circle())
                     .padding(4)
             }
@@ -236,25 +239,29 @@ struct MediaGridView: View {
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 18))
-                    .foregroundStyle(.white)
-                    .background(Color.black.opacity(0.4), in: Circle())
+                    .foregroundStyle(YP2Color.paper)
+                    .background(YP2Color.overlay, in: Circle())
             }
             .offset(x: 4, y: -4)
+        }
+        .overlay {
+            Rectangle()
+                .stroke(YP2Color.borderDefault, lineWidth: 1)
         }
     }
 
     private func mediaThumbnail(media: PostMedia, index: Int) -> some View {
         ZStack(alignment: .topTrailing) {
             thumbnailImage(for: media)
-                .frame(width: 80, height: 80)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .frame(width: 84, height: 84)
+                .clipped()
 
             if case .video = media {
                 Image(systemName: "play.fill")
                     .font(.system(size: 12))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(YP2Color.paper)
                     .padding(4)
-                    .background(Color.black.opacity(0.5))
+                    .background(YP2Color.overlay)
                     .clipShape(Circle())
                     .padding(4)
             }
@@ -264,10 +271,14 @@ struct MediaGridView: View {
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 18))
-                    .foregroundStyle(.white)
-                    .background(Color.black.opacity(0.4), in: Circle())
+                    .foregroundStyle(YP2Color.paper)
+                    .background(YP2Color.overlay, in: Circle())
             }
             .offset(x: 4, y: -4)
+        }
+        .overlay {
+            Rectangle()
+                .stroke(YP2Color.borderDefault, lineWidth: 1)
         }
     }
 
@@ -295,6 +306,6 @@ struct MediaGridView: View {
 
     private var placeholderRect: some View {
         Rectangle()
-            .fill(YPColor.backgroundSecondary)
+            .fill(YP2Color.fog)
     }
 }
